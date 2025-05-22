@@ -1,0 +1,25 @@
+[package]
+name = "rusm64"
+version = "0.1.0"
+edition = "2024"
+description = "MOS/Commodore C64 assembler."
+authors = [ "Jens Korinth <jens.korinth@tuta.io>" ]
+repository = "https://github/jkorinth/rusm64.git"
+license = "GPL-2.0-or-later"
+keywords = [ "assembler", "6502", "6510", "C64", "Commodore" ]
+
+[dependencies]
+pest = "2.7"
+pest_derive = "2.7"
+thiserror = "1.0"
+log = "0.4"
+clap = { version = "4.4", features = ["derive"] }
+once_cell = "1.18"
+
+[lib]
+name = "rusm"
+path = "src/lib.rs"
+
+[[bin]]
+name = "rusm"
+path = "src/main.rs"

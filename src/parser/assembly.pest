@@ -1,0 +1,66 @@
+// C64 Assembly Grammar using Pest
+
+// Whitespace handling
+WHITESPACE = _{ " " | "\t" }
+COMMENT = { ";" ~ (!NEWLINE ~ ANY)* }
+
+// Main Program Structure
+program = { SOI ~ (line | COMMENT ~ NEWLINE)* ~ EOI }
+line = { 
+    (label ~ (instruction | directive | constant)? | constant | instruction | directive)? ~ 
+    COMMENT? ~ NEWLINE 
+}
+NEWLINE = _{ "\n" | "\r\n" | "\r" }
+
+// Constants
+constant = { identifier ~ "=" ~ primary }
+
+// Labels
+label = @{ identifier ~ ":" }
+
+// Instructions
+instruction = { opcode ~ operand? ~ COMMENT? }
+opcode = @{ ASCII_ALPHA+ }
+
+// Operands
+operand = @{ 
+    "#" ~ primary |                      // Immediate
+    primary ~ ",x" |                     // Indexed with X
+    primary ~ ",y" |                     // Indexed with Y
+    "(" ~ primary ~ ")" |               // Indirect
+    "(" ~ primary ~ ",x)" |             // Indexed indirect
+    "(" ~ primary ~ "),y" |             // Indirect indexed
+    primary                              // Absolute or Zero Page
+}
+
+// Directives
+directive = { directive_name ~ directive_value }
+directive_name = @{ "." ~ ASCII_ALPHA+ }
+directive_value = @{ 
+    string_literal | 
+    number_literal | 
+    identifier 
+}
+
+// Expressions - Use primary for operands instead of expression to avoid left-recursion
+primary = { 
+    number_literal | 
+    identifier | 
+    "(" ~ primary ~ ")"
+}
+
+// Literals
+number_literal = @{ 
+    "$" ~ hex_digit+ |                      // Hexadecimal
+    "%" ~ bin_digit+ |                      // Binary
+    ASCII_DIGIT+                            // Decimal
+}
+hex_digit = _{ ASCII_DIGIT | 'a'..'f' | 'A'..'F' }
+bin_digit = _{ '0'..'1' }
+
+string_literal = ${ "\"" ~ inner_str ~ "\"" }
+inner_str = @{ (!("\"" | "\\") ~ ANY)* ~ (escape ~ inner_str)? }
+escape = @{ "\\" ~ ("\"" | "\\" | "n" | "r" | "t") }
+
+// Identifiers (variable names, etc.)
+identifier = @{ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")* }
