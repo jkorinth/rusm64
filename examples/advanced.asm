@@ -4,13 +4,13 @@
 .org $c000    ; Start at $c000
 
 ; Constants
-SCREEN_BASE = $0400   ; Base address of screen memory
-COLOR_BASE  = $d800   ; Base address of color memory
-CHAR_COLOR  = $01     ; White text
-CURSOR_X    = $10     ; Zero page cursor X position
-CURSOR_Y    = $11     ; Zero page cursor Y position
-MAX_X       = 40      ; Screen width
-MAX_Y       = 25      ; Screen height
+.const SCREEN_BASE $0400   ; Base address of screen memory
+.const COLOR_BASE  $d800   ; Base address of color memory
+.const CHAR_COLOR  $01     ; White text
+.const CURSOR_X    $10     ; Zero page cursor X position
+.const CURSOR_Y    $11     ; Zero page cursor Y position
+.const MAX_X       40      ; Screen width
+.const MAX_Y       25      ; Screen height
 
 start:
     ; Initialize
@@ -142,8 +142,8 @@ color_hi:
     .byte >(COLOR_BASE+960)
 
 ; Zero page pointers
-screen_ptr = $fb      ; 2 bytes
-color_ptr  = $fd      ; 2 bytes
+.const screen_ptr $fb      ; 2 bytes
+.const color_ptr  $fd      ; 2 bytes
 
 ; Message to display
 message:

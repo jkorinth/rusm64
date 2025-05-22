@@ -2,52 +2,61 @@
 
 // Whitespace handling
 WHITESPACE = _{ " " | "\t" }
-COMMENT = { ";" ~ (!NEWLINE ~ ANY)* }
-
-// Main Program Structure
-program = { SOI ~ (line | COMMENT ~ NEWLINE)* ~ EOI }
-line = { 
-    (label ~ (instruction | directive | constant)? | constant | instruction | directive)? ~ 
-    COMMENT? ~ NEWLINE 
-}
 NEWLINE = _{ "\n" | "\r\n" | "\r" }
 
-// Constants
-constant = { identifier ~ "=" ~ primary }
+comment = { ";" ~ (!NEWLINE ~ ANY)* }
+
+// A program is a list of lines.
+program = { SOI ~ (line)* ~ EOI }
+
+line = {
+    label? ~ (instruction | directive)? ~ comment? ~ NEWLINE
+}
 
 // Labels
-label = @{ identifier ~ ":" }
+label = @{ label_name ~ ":" }
+label_name = @{ ("_"* ~ ASCII_ALPHA_LOWER ~ (ASCII_ALPHANUMERIC | "_")*) | "*" }
 
 // Instructions
-instruction = { opcode ~ operand? ~ COMMENT? }
-opcode = @{ ASCII_ALPHA+ }
+instruction = { opcode ~ operand? }
+
+// Opcode
+opcode = @{ ASCII_ALPHA{3} }
 
 // Operands
 operand = @{ 
     "#" ~ primary |                      // Immediate
     primary ~ ",x" |                     // Indexed with X
     primary ~ ",y" |                     // Indexed with Y
-    "(" ~ primary ~ ")" |               // Indirect
-    "(" ~ primary ~ ",x)" |             // Indexed indirect
-    "(" ~ primary ~ "),y" |             // Indirect indexed
+    "(" ~ primary ~ ")" |                // Indirect
+    "(" ~ primary ~ ",x)" |              // Indexed indirect
+    "(" ~ primary ~ "),y" |              // Indirect indexed
     primary                              // Absolute or Zero Page
 }
 
 // Directives
-directive = { directive_name ~ directive_value }
+//directive = { directive_name ~ (primary)* }
+directive = { directive_name ~ (directive_arg)* }
+directive_arg = @{ (!NEWLINE ~ ANY)+ }
 directive_name = @{ "." ~ ASCII_ALPHA+ }
-directive_value = @{ 
-    string_literal | 
-    number_literal | 
-    identifier 
-}
+//directive_value = @{ 
+//    string_literal | 
+//    number_literal | 
+//    identifier 
+//}
 
 // Expressions - Use primary for operands instead of expression to avoid left-recursion
 primary = { 
     number_literal | 
-    identifier | 
-    "(" ~ primary ~ ")"
+    "'" ~ char_literal ~ "'" |
+    label_name |
+    identifier |
+    "(" ~ primary ~ ")" |
+    "<" ~ primary |
+    ">" ~ primary
 }
+
+identifier = @{ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")+ }
 
 // Literals
 number_literal = @{ 
@@ -57,10 +66,8 @@ number_literal = @{
 }
 hex_digit = _{ ASCII_DIGIT | 'a'..'f' | 'A'..'F' }
 bin_digit = _{ '0'..'1' }
+char_literal = @{ ANY }
 
 string_literal = ${ "\"" ~ inner_str ~ "\"" }
 inner_str = @{ (!("\"" | "\\") ~ ANY)* ~ (escape ~ inner_str)? }
 escape = @{ "\\" ~ ("\"" | "\\" | "n" | "r" | "t") }
-
-// Identifiers (variable names, etc.)
-identifier = @{ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")* }

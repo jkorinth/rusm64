@@ -1,215 +1,248 @@
-// AST representation for C64 assembly language
-
-use std::collections::HashMap;
 use std::fmt;
+
+use derive_more::{From, FromStr};
 
 /// The complete AST representation of an assembly program
 #[derive(Debug, Default, Clone)]
-pub struct Ast {
-    /// List of instructions in the program
-    instructions: Vec<Instruction>,
-    
-    /// Map of labels to their positions
-    labels: HashMap<String, Label>,
-    
-    /// Map of constants to their values
-    constants: HashMap<String, String>,
-    
-    /// List of directives in the program
-    directives: Vec<Directive>,
-}
+pub struct Ast(Vec<Line>);
 
 impl Ast {
-    pub fn new() -> Self {
-        Self {
-            instructions: Vec::new(),
-            labels: HashMap::new(),
-            constants: HashMap::new(),
-            directives: Vec::new(),
-        }
+    pub fn add_line(&mut self, line: Line) {
+        self.0.push(line);
     }
-    
-    pub fn add_instruction(&mut self, instruction: Instruction) {
-        self.instructions.push(instruction);
+
+    pub fn lines(&self) -> &Vec<Line> {
+        &self.0
     }
-    
-    pub fn add_label(&mut self, label: Label) {
-        self.labels.insert(label.name.clone(), label);
+
+    pub fn directives(&self) -> Vec<&InstrDir> {
+        self.0
+            .iter()
+            .filter(|line| matches!(line.instrdir(), Some(InstrDir::Directive(_, _))))
+            .map(|l| l.instrdir().unwrap())
+            .collect()
     }
-    
-    pub fn add_constant(&mut self, name: String, value: String) {
-        self.constants.insert(name, value);
+
+    pub fn instructions(&self) -> Vec<&InstrDir> {
+        self.0
+            .iter()
+            .filter(|line| matches!(line.instrdir(), Some(InstrDir::Instruction(_, _))))
+            .map(|l| l.instrdir().unwrap())
+            .collect()
     }
-    
-    pub fn add_directive(&mut self, directive: Directive) {
-        self.directives.push(directive);
+
+    pub fn constants(&self) -> Vec<&InstrDir> {
+        self.0
+            .iter()
+            .filter(|line| matches!(line.instrdir(), Some(InstrDir::Directive(name, _)) if name == "const"))
+            .map(|l| l.instrdir().unwrap())
+            .collect()
     }
-    
-    pub fn instructions(&self) -> &[Instruction] {
-        &self.instructions
-    }
-    
-    pub fn labels(&self) -> &HashMap<String, Label> {
-        &self.labels
-    }
-    
-    pub fn constants(&self) -> &HashMap<String, String> {
-        &self.constants
-    }
-    
-    pub fn directives(&self) -> &[Directive] {
-        &self.directives
+
+    pub fn constant(&self, cname: &str) -> Option<String> {
+        self.constants()
+            .iter()
+            .filter_map(|line| match line {
+                InstrDir::Directive(dname, args) if dname == "const" && args.len() > 1 => {
+                    let name = &args[0];
+                    if name == cname {
+                        Some(args[1].clone())
+                    } else {
+                        None
+                    }
+                }
+                _ => None,
+            })
+            .next()
     }
 }
 
-/// Represents a 6502 instruction
+#[derive(Debug, Default, Clone)]
+pub struct Line(Option<Label>, Option<InstrDir>, Option<Comment>);
+
+impl Line {
+    pub fn label(&self) -> Option<&Label> {
+        self.0.as_ref()
+    }
+
+    pub fn instrdir(&self) -> Option<&InstrDir> {
+        self.1.as_ref()
+    }
+
+    pub fn comment(&self) -> Option<&Comment> {
+        self.2.as_ref()
+    }
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct LineBuilder {
+    label: Option<Label>,
+    instrdir: Option<InstrDir>,
+    comment: Option<Comment>,
+}
+
+impl LineBuilder {
+    pub fn label(mut self, label: Label) -> Self {
+        self.label = Some(label);
+        self
+    }
+
+    pub fn instrdir(mut self, instrdir: Option<InstrDir>) -> Self {
+        self.instrdir = instrdir;
+        self
+    }
+
+    pub fn comment(mut self, comment: Comment) -> Self {
+        self.comment = Some(comment);
+        self
+    }
+
+    pub fn build(self) -> Line {
+        Line(self.label, self.instrdir, self.comment)
+    }
+}
+
 #[derive(Debug, Clone)]
-pub struct Instruction {
-    /// The opcode of the instruction
-    pub opcode: Opcode,
-    
-    /// The operand of the instruction (if any)
-    pub operand: Option<Operand>,
+pub enum InstrDir {
+    Instruction(Opcode, Option<Operand>),
+    Directive(String, Vec<String>),
 }
 
-impl Instruction {
-    pub fn new(opcode: Opcode, operand: Option<Operand>) -> Self {
-        Self { opcode, operand }
+#[derive(Debug, Clone, Default)]
+pub struct DirectiveBuilder {
+    name: Option<String>,
+    args: Vec<String>,
+}
+
+impl DirectiveBuilder {
+    pub fn name(mut self, name: String) -> Self {
+        self.name = Some(name);
+        self
+    }
+
+    pub fn arg(mut self, arg: String) -> Self {
+        self.args.push(arg);
+        self
+    }
+
+    pub fn build(self) -> InstrDir {
+        InstrDir::Directive(self.name.unwrap_or_default(), self.args)
     }
 }
+
+#[derive(Debug, Default, From, Clone)]
+pub struct Comment(String);
 
 /// Represents a 6502 opcode
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, FromStr, Hash)]
 pub enum Opcode {
     // Load/Store Operations
-    LDA, LDX, LDY, STA, STX, STY,
-    
+    LDA,
+    LDX,
+    LDY,
+    STA,
+    STX,
+    STY,
+
     // Register Transfers
-    TAX, TAY, TSX, TXA, TXS, TYA,
-    
+    TAX,
+    TAY,
+    TSX,
+    TXA,
+    TXS,
+    TYA,
+
     // Stack Operations
-    PHA, PHP, PLA, PLP,
-    
+    PHA,
+    PHP,
+    PLA,
+    PLP,
+
     // Logical Operations
-    AND, EOR, ORA, BIT,
-    
+    AND,
+    EOR,
+    ORA,
+    BIT,
+
     // Arithmetic Operations
-    ADC, SBC, CMP, CPX, CPY,
-    
+    ADC,
+    SBC,
+    CMP,
+    CPX,
+    CPY,
+
     // Increments & Decrements
-    INC, INX, INY, DEC, DEX, DEY,
-    
+    INC,
+    INX,
+    INY,
+    DEC,
+    DEX,
+    DEY,
+
     // Shifts
-    ASL, LSR, ROL, ROR,
-    
+    ASL,
+    LSR,
+    ROL,
+    ROR,
+
     // Jumps & Calls
-    JMP, JSR, RTS, RTI,
-    
+    JMP,
+    JSR,
+    RTS,
+    RTI,
+
     // Branches
-    BCC, BCS, BEQ, BMI, BNE, BPL, BVC, BVS,
-    
+    BCC,
+    BCS,
+    BEQ,
+    BMI,
+    BNE,
+    BPL,
+    BVC,
+    BVS,
+
     // Status Flag Operations
-    CLC, CLD, CLI, CLV, SEC, SED, SEI,
-    
+    CLC,
+    CLD,
+    CLI,
+    CLV,
+    SEC,
+    SED,
+    SEI,
+
     // No Operation
     NOP,
-    
+
     // Illegal/Undocumented Opcodes (just a few examples)
-    SLO, RLA, SRE, RRA, SAX, LAX, DCP, ISC,
-    
+    SLO,
+    RLA,
+    SRE,
+    RRA,
+    SAX,
+    LAX,
+    DCP,
+    ISC,
+
     // Halt and Catch Fire
     HCF,
-}
-
-impl Opcode {
-    pub fn from_str(s: &str) -> Result<Self, String> {
-        match s {
-            "LDA" => Ok(Opcode::LDA),
-            "LDX" => Ok(Opcode::LDX),
-            "LDY" => Ok(Opcode::LDY),
-            "STA" => Ok(Opcode::STA),
-            "STX" => Ok(Opcode::STX),
-            "STY" => Ok(Opcode::STY),
-            "TAX" => Ok(Opcode::TAX),
-            "TAY" => Ok(Opcode::TAY),
-            "TSX" => Ok(Opcode::TSX),
-            "TXA" => Ok(Opcode::TXA),
-            "TXS" => Ok(Opcode::TXS),
-            "TYA" => Ok(Opcode::TYA),
-            "PHA" => Ok(Opcode::PHA),
-            "PHP" => Ok(Opcode::PHP),
-            "PLA" => Ok(Opcode::PLA),
-            "PLP" => Ok(Opcode::PLP),
-            "AND" => Ok(Opcode::AND),
-            "EOR" => Ok(Opcode::EOR),
-            "ORA" => Ok(Opcode::ORA),
-            "BIT" => Ok(Opcode::BIT),
-            "ADC" => Ok(Opcode::ADC),
-            "SBC" => Ok(Opcode::SBC),
-            "CMP" => Ok(Opcode::CMP),
-            "CPX" => Ok(Opcode::CPX),
-            "CPY" => Ok(Opcode::CPY),
-            "INC" => Ok(Opcode::INC),
-            "INX" => Ok(Opcode::INX),
-            "INY" => Ok(Opcode::INY),
-            "DEC" => Ok(Opcode::DEC),
-            "DEX" => Ok(Opcode::DEX),
-            "DEY" => Ok(Opcode::DEY),
-            "ASL" => Ok(Opcode::ASL),
-            "LSR" => Ok(Opcode::LSR),
-            "ROL" => Ok(Opcode::ROL),
-            "ROR" => Ok(Opcode::ROR),
-            "JMP" => Ok(Opcode::JMP),
-            "JSR" => Ok(Opcode::JSR),
-            "RTS" => Ok(Opcode::RTS),
-            "RTI" => Ok(Opcode::RTI),
-            "BCC" => Ok(Opcode::BCC),
-            "BCS" => Ok(Opcode::BCS),
-            "BEQ" => Ok(Opcode::BEQ),
-            "BMI" => Ok(Opcode::BMI),
-            "BNE" => Ok(Opcode::BNE),
-            "BPL" => Ok(Opcode::BPL),
-            "BVC" => Ok(Opcode::BVC),
-            "BVS" => Ok(Opcode::BVS),
-            "CLC" => Ok(Opcode::CLC),
-            "CLD" => Ok(Opcode::CLD),
-            "CLI" => Ok(Opcode::CLI),
-            "CLV" => Ok(Opcode::CLV),
-            "SEC" => Ok(Opcode::SEC),
-            "SED" => Ok(Opcode::SED),
-            "SEI" => Ok(Opcode::SEI),
-            "NOP" => Ok(Opcode::NOP),
-            // Illegal/Undocumented Opcodes
-            "SLO" => Ok(Opcode::SLO),
-            "RLA" => Ok(Opcode::RLA),
-            "SRE" => Ok(Opcode::SRE),
-            "RRA" => Ok(Opcode::RRA),
-            "SAX" => Ok(Opcode::SAX),
-            "LAX" => Ok(Opcode::LAX),
-            "DCP" => Ok(Opcode::DCP),
-            "ISC" => Ok(Opcode::ISC),
-            "HCF" => Ok(Opcode::HCF),
-            _ => Err(format!("Unknown opcode: {}", s)),
-        }
-    }
 }
 
 /// Addressing modes for 6502 instructions
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum AddressingMode {
-    Implied,            // No operand (e.g., NOP)
-    Accumulator,        // Operand is accumulator (e.g., ASL A)
-    Immediate,          // Operand is immediate value (e.g., LDA #$10)
-    ZeroPage,           // Operand is in zero page (e.g., LDA $10)
-    ZeroPageX,          // Indexed zero page with X (e.g., LDA $10,X)
-    ZeroPageY,          // Indexed zero page with Y (e.g., LDX $10,Y)
-    Absolute,           // Operand is absolute address (e.g., LDA $1234)
-    AbsoluteX,          // Indexed absolute with X (e.g., LDA $1234,X)
-    AbsoluteY,          // Indexed absolute with Y (e.g., LDA $1234,Y)
-    Indirect,           // Indirect addressing (e.g., JMP ($1234))
-    IndexedIndirect,    // Indexed indirect (e.g., LDA ($10,X))
-    IndirectIndexed,    // Indirect indexed (e.g., LDA ($10),Y)
-    Relative,           // Relative addressing for branches (e.g., BNE label)
+    Implied,         // No operand (e.g., NOP)
+    Accumulator,     // Operand is accumulator (e.g., ASL A)
+    Immediate,       // Operand is immediate value (e.g., LDA #$10)
+    ZeroPage,        // Operand is in zero page (e.g., LDA $10)
+    ZeroPageX,       // Indexed zero page with X (e.g., LDA $10,X)
+    ZeroPageY,       // Indexed zero page with Y (e.g., LDX $10,Y)
+    Absolute,        // Operand is absolute address (e.g., LDA $1234)
+    AbsoluteX,       // Indexed absolute with X (e.g., LDA $1234,X)
+    AbsoluteY,       // Indexed absolute with Y (e.g., LDA $1234,Y)
+    Indirect,        // Indirect addressing (e.g., JMP ($1234))
+    IndexedIndirect, // Indexed indirect (e.g., LDA ($10,X))
+    IndirectIndexed, // Indirect indexed (e.g., LDA ($10),Y)
+    Relative,        // Relative addressing for branches (e.g., BNE label)
 }
 
 /// Operand type for instructions
@@ -217,22 +250,22 @@ pub enum AddressingMode {
 pub enum Operand {
     /// Immediate value (#$xx)
     Immediate(String),
-    
+
     /// Absolute or zero page address ($xxxx or $xx)
     Address(String),
-    
+
     /// Zero page,X or Absolute,X
     IndexedX(String),
-    
+
     /// Zero page,Y or Absolute,Y
     IndexedY(String),
-    
+
     /// Indirect address (($xxxx))
     Indirect(String),
-    
+
     /// Indexed indirect (($xx,X))
     IndexedIndirect(String),
-    
+
     /// Indirect indexed (($xx),Y)
     IndirectIndexed(String),
 }
@@ -275,16 +308,23 @@ impl Operand {
             Operand::Address(s.to_string())
         }
     }
-    
-    pub fn get_addressing_mode(&self, opcode: Opcode) -> AddressingMode {
+
+    pub fn get_addressing_mode(&self, opcode: &Opcode) -> AddressingMode {
         // Branch instructions always use relative addressing
-        if matches!(opcode, 
-            Opcode::BCC | Opcode::BCS | Opcode::BEQ | 
-            Opcode::BMI | Opcode::BNE | Opcode::BPL | 
-            Opcode::BVC | Opcode::BVS) {
+        if matches!(
+            opcode,
+            Opcode::BCC
+                | Opcode::BCS
+                | Opcode::BEQ
+                | Opcode::BMI
+                | Opcode::BNE
+                | Opcode::BPL
+                | Opcode::BVC
+                | Opcode::BVS
+        ) {
             return AddressingMode::Relative;
         }
-            
+
         match self {
             Operand::Immediate(_) => AddressingMode::Immediate,
             Operand::Address(addr) => {
@@ -322,7 +362,7 @@ impl Operand {
 pub struct Label {
     /// Name of the label
     pub name: String,
-    
+
     /// Position of the label (to be filled during assembly)
     pub position: Option<usize>,
 }
@@ -334,30 +374,11 @@ impl Label {
             position: None,
         }
     }
-    
+
     pub fn with_position(name: &str, position: usize) -> Self {
         Self {
             name: name.to_string(),
             position: Some(position),
-        }
-    }
-}
-
-/// Represents an assembly directive (like .byte, .word, etc.)
-#[derive(Debug, Clone)]
-pub struct Directive {
-    /// Name of the directive
-    pub name: String,
-    
-    /// Value of the directive
-    pub value: String,
-}
-
-impl Directive {
-    pub fn new(name: &str, value: &str) -> Self {
-        Self {
-            name: name.to_string(),
-            value: value.to_string(),
         }
     }
 }
