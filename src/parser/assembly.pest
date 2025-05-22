@@ -4,11 +4,14 @@
 WHITESPACE = _{ " " | "\t" }
 NEWLINE = _{ "\n" | "\r\n" | "\r" }
 
+// Not COMMENT - need to control where comments may occur.
 comment = { ";" ~ (!NEWLINE ~ ANY)* }
 
 // A program is a list of lines.
 program = { SOI ~ (line)* ~ EOI }
 
+// A line can have a label, an instruction or directive, and
+// a comment, it always ends with a newline. Can be empty.
 line = {
     label? ~ (instruction | directive)? ~ comment? ~ NEWLINE
 }
@@ -23,7 +26,7 @@ instruction = { opcode ~ operand? }
 // Opcode
 opcode = @{ ASCII_ALPHA{3} }
 
-// Operands
+// Operand encodes the addressing mode used.
 operand = @{ 
     "#" ~ primary |                      // Immediate
     primary ~ ",x" |                     // Indexed with X
@@ -35,27 +38,23 @@ operand = @{
 }
 
 // Directives
-//directive = { directive_name ~ (primary)* }
 directive = { directive_name ~ (directive_arg)* }
+// TODO this needs more structure
 directive_arg = @{ (!NEWLINE ~ ANY)+ }
 directive_name = @{ "." ~ ASCII_ALPHA+ }
-//directive_value = @{ 
-//    string_literal | 
-//    number_literal | 
-//    identifier 
-//}
 
-// Expressions - Use primary for operands instead of expression to avoid left-recursion
+// Expr
 primary = { 
     number_literal | 
     "'" ~ char_literal ~ "'" |
     label_name |
     identifier |
     "(" ~ primary ~ ")" |
-    "<" ~ primary |
-    ">" ~ primary
+    "<" ~ primary | 			// lower nibble
+    ">" ~ primary 			// upper nibble
 }
 
+// Generic identifier
 identifier = @{ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")+ }
 
 // Literals
@@ -68,6 +67,7 @@ hex_digit = _{ ASCII_DIGIT | 'a'..'f' | 'A'..'F' }
 bin_digit = _{ '0'..'1' }
 char_literal = @{ ANY }
 
+// Strings - not used yet
 string_literal = ${ "\"" ~ inner_str ~ "\"" }
 inner_str = @{ (!("\"" | "\\") ~ ANY)* ~ (escape ~ inner_str)? }
 escape = @{ "\\" ~ ("\"" | "\\" | "n" | "r" | "t") }
