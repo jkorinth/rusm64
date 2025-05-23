@@ -1,183 +1,62 @@
-// Parser module for C64 assembly
 pub mod grammar;
 
-use grammar::{AssemblyParser, Parser, Rule};
-use pest::error::Error as PestError;
-use pest::iterators::{Pair, Pairs};
+pub use grammar::{RusmParser, from_source};
 
-use crate::ast::*;
-use std::str::FromStr;
+#[cfg(test)]
+mod tests {
+    use super::grammar::*;
 
-#[derive(Debug, thiserror::Error)]
-pub enum ParseError {
-    #[error("Pest error: {0}")]
-    Pest(#[from] Box<PestError<Rule>>),
+    #[test]
+    fn simple_program() {
+        let src = r#"
+        ; Hello world!
+        .org $8000
+        .const BG 7
+        .const FG 0
+        .const COLOR_RAM $d800
 
-    #[error("Invalid syntax: {0}")]
-    InvalidSyntax(String),
+        start:
+        lda BG
+        sta COLOR_RAM
 
-    #[error("Unknown opcode: {0}")]
-    UnknownOpcode(String),
-}
-
-/// Parse source code into AST
-pub fn parse_source(source: &str) -> Result<Ast, ParseError> {
-    pest::set_error_detail(true);
-    let pairs =
-        AssemblyParser::parse(Rule::program, source).map_err(|e| ParseError::Pest(Box::new(e)))?;
-
-    let mut ast = Ast::default();
-    parse_program(pairs, &mut ast)?;
-    Ok(ast)
-}
-
-fn parse_program(pairs: Pairs<Rule>, ast: &mut Ast) -> Result<(), ParseError> {
-    for pair in pairs {
-        match pair.as_rule() {
-            Rule::program => {
-                // Program contains lines and EOI, so we need to process its inner pairs
-                let ips = pair.into_inner();
-                println!("Program: {:?}", ips);
-                for inner_pair in ips {
-                    match inner_pair.as_rule() {
-                        Rule::line => {
-                            ast.add_line(parse_line(inner_pair.into_inner())?);
-                        }
-                        Rule::EOI => {} // End of input
-                        _ => {
-                            panic!(
-                                "{}",
-                                format!(
-                                    "Unexpected rule in program: {:?}: {:?}",
-                                    inner_pair.as_rule(),
-                                    inner_pair
-                                )
-                            );
-                            return Err(ParseError::InvalidSyntax(format!(
-                                "Unexpected rule in program: {:?}",
-                                inner_pair.as_rule()
-                            )));
-                        }
-                    }
-                }
-            }
-            Rule::EOI => {} // End of input
-            _ => {
-                panic!(
-                    "{}",
-                    format!("Unexpected rule in program: {:?}", pair.as_rule())
-                );
-                return Err(ParseError::InvalidSyntax(format!(
-                    "Unexpected rule: {:?}",
-                    pair.as_rule()
-                )));
-            }
-        }
+        _loop:
+        jmp _loop
+        jmp *
+        "#;
+        let tokens =
+            RusmParser::parse(Rule::program, src).expect("could not tokenize simple program");
+        println!("tokens = {}", tokens);
+        let prg = RusmParser::parse_program(tokens).expect("could not parse simple program");
+        println!("AST = {:?}", prg);
     }
-    Ok(())
-}
 
-fn parse_line(pairs: Pairs<Rule>) -> Result<Line, ParseError> {
-    let mut line = LineBuilder::default();
-
-    for pair in pairs {
-        match pair.as_rule() {
-            Rule::label => {
-                let label_name = pair.as_str().trim_end_matches(':');
-                line = line.label(Label::new(label_name));
-            }
-            Rule::instruction => {
-                line = line.instrdir(Some(parse_instruction(pair.into_inner())?));
-            }
-            Rule::directive => {
-                line = line.instrdir(Some(parse_directive(pair.into_inner())?));
-            }
-            Rule::comment => {
-                line = line.comment(pair.as_str().to_string().into());
-            } // Ignore comments
-            _ => {
-                panic!(
-                    "{}",
-                    format!("Unexpected rule in line: {:?}", pair.as_rule())
-                );
-                return Err(ParseError::InvalidSyntax(format!(
-                    "Unexpected rule in line: {:?}",
-                    pair.as_rule()
-                )));
-            }
-        }
+    #[test]
+    fn parse_example_minimal() {
+        let prg = from_source(
+            &std::fs::read_to_string("examples/minimal.asm")
+                .expect("failed to read examples/minimal.asm"),
+        )
+        .expect("failed to parse examples/minimal.asm");
+        println!("AST = {:?}", prg);
     }
-    Ok(line.build())
-}
 
-pub fn parse_instruction(pairs: Pairs<Rule>) -> Result<InstrDir, ParseError> {
-    let mut opcode: Option<Opcode> = None;
-    let mut operand: Option<Operand> = None;
-
-    for pair in pairs {
-        match pair.as_rule() {
-            Rule::opcode => {
-                let opcode_str = pair.as_str();
-                let opcode = Opcode::from_str(opcode_str)
-                    .map_err(|_| ParseError::UnknownOpcode(opcode_str.to_string()))?;
-
-                if let Some(operand_pair) = pair.into_inner().next() {
-                    if operand_pair.as_rule() == Rule::operand {
-                        operand = Some(parse_operand(operand_pair)?);
-                    } else {
-                        return Err(ParseError::InvalidSyntax(format!(
-                            "Expected operand, got {:?}",
-                            operand_pair.as_rule()
-                        )));
-                    }
-                }
-                return Ok(InstrDir::Instruction(opcode, operand));
-            }
-            _ => {
-                panic!(
-                    "{}",
-                    format!("Unexpected rule in instruction: {:?}", pair.as_rule())
-                );
-                return Err(ParseError::InvalidSyntax(format!(
-                    "Unexpected rule in instruction: {:?}",
-                    pair.as_rule()
-                )));
-            }
-        }
+    #[test]
+    fn parse_example_simple() {
+        let prg = from_source(
+            &std::fs::read_to_string("examples/simple.asm")
+                .expect("failed to read examples/simple.asm"),
+        )
+        .expect("failed to parse examples/simple.asm");
+        println!("AST = {:?}", prg);
     }
-    return Err(ParseError::InvalidSyntax(
-        "Instruction parsing failed".to_string(),
-    ));
-}
 
-fn parse_directive(pairs: Pairs<Rule>) -> Result<InstrDir, ParseError> {
-    let mut directive = DirectiveBuilder::default();
-
-    for pair in pairs {
-        match pair.as_rule() {
-            Rule::directive_name => {
-                directive = directive.name(pair.as_str().to_string());
-                //return Ok(InstrDir::Directive(pair.as_str().to_string(), Vec::new()));
-            }
-            Rule::directive_arg => {
-                directive = directive.arg(pair.as_str().to_string());
-            }
-            _ => {
-                panic!(
-                    "{}",
-                    format!("Unexpected rule in directive: {:?}", pair.as_rule())
-                );
-                return Err(ParseError::InvalidSyntax(format!(
-                    "Unexpected rule in directive: {:?}",
-                    pair.as_rule()
-                )));
-            }
-        }
+    #[test]
+    fn parse_example_advanced() {
+        let prg = from_source(
+            &std::fs::read_to_string("examples/advanced.asm")
+                .expect("failed to read examples/advanced.asm"),
+        )
+        .expect("failed to parse examples/advanced.asm");
+        println!("AST = {:?}", prg);
     }
-    Ok(directive.build())
-}
-
-fn parse_operand(pair: Pair<Rule>) -> Result<Operand, ParseError> {
-    let operand_str = pair.as_str();
-    Ok(Operand::parse(operand_str))
 }

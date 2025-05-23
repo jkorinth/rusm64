@@ -1,0 +1,101 @@
+// terminal rules
+
+WHITESPACE = _{ " " | "\t" }
+NEWLINE = _{ "\n" | "\r\n" | "\r" }
+
+hex_digit = _{ ASCII_DIGIT | 'a'..'f' | 'A'..'F' }
+bin_digit = _{ '0'..'1' }
+
+chr_literal = @{ "'" ~ (!"'" ~ ANY) ~ "'" }
+hex_literal = @{ "$" ~ hex_digit+ }
+bin_literal = @{ "%" ~ bin_digit+ }
+dec_literal = @{ ASCII_DIGIT }
+
+label_name = @{ ("_"* ~ ASCII_ALPHA_LOWER ~ (ASCII_ALPHANUMERIC | "_")*) | "*" }
+dir_name = @{ "_"* ~ ASCII_ALPHA_LOWER ~ (ASCII_ALPHANUMERIC | "_")* }
+identifier = @{ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")+ }
+opcode = @{ ASCII_ALPHA{3} }
+
+// non-terminal rules
+
+// A program is a list of lines.
+program = { SOI ~ (line)* ~ EOI }
+
+// A line can have a label, an instruction, and a comment,
+// it always ends with a newline, but can be empty.
+line = { label? ~ instruction? ~ comment? ~ NEWLINE }
+
+
+// Labels may use any number of _'s as prefix, but must follow
+// with a lowercase letter, followed by any case alphanum.
+// Special case: The "*" referencs the current PC.
+// label expressions must be followed by a ':'.
+label = { label_name ~ ":" }
+
+// Instructions are either ops or directives.
+instruction = { op | directive }
+
+// Ops are opcode (mnemonic) followed by an optional operand.
+op = { opcode ~ operand? }
+
+operand = {
+  immediate
+| indexed_x
+| indexed_y
+| abs_zp
+| indirect
+| indexed_indirect
+| indirect_indexed
+}
+
+immediate = { "#" ~ expr }
+indexed_x = { expr ~ "," ~ "x" }
+indexed_y = { expr ~ "," ~ "y" }
+indirect =  { "(" ~ expr ~ ")" }
+indexed_indirect = { "(" ~ expr ~ "," ~ "x" ~ ")" }
+indirect_indexed = { "(" ~ expr ~ ")" ~ "," ~ "y" }
+abs_zp = { expr }
+
+// Directives start with ., followed by an arbitrary string.
+directive = { "." ~ dir_name ~ dir_arg }
+dir_arg = { (!NEWLINE ~ !";" ~ ANY)* }
+
+// Not COMMENT - need to control where comments may occur.
+comment = { ";" ~ (!NEWLINE ~ ANY)* }
+
+expr = {
+  bin_expr
+| lexpr
+}
+
+lexpr = {
+  literal_expr
+| ref_expr
+| paren_expr
+| lower_expr
+| upper_expr
+}
+
+literal_expr = {
+  number_literal
+| chr_literal
+}
+
+number_literal = {
+  hex_literal
+| bin_literal
+| dec_literal
+}
+
+ref_expr = {
+  label_name
+| identifier
+}
+
+paren_expr = { "(" ~ expr ~ ")" }
+lower_expr = { "<" ~ expr }
+upper_expr = { ">" ~ expr }
+
+bin_expr = { lexpr ~ binop ~ expr }
+
+binop = { "+" | "-" | "/" | "*" }
