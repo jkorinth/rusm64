@@ -27,10 +27,11 @@ impl std::fmt::Display for ErrorList {
 impl From<AssembleErrorList> for ErrorList {
     fn from(value: AssembleErrorList) -> Self {
         Self(
-        value
-            .iter()
-            .map(|(_, e)| Error::Assembler(e.clone()))
-            .collect::<Vec<_>>())
+            value
+                .iter()
+                .map(|(_, e)| Error::Assembler(e.clone()))
+                .collect::<Vec<_>>(),
+        )
     }
 }
 

@@ -4,9 +4,9 @@
 .org $c000    ; Start at $c000
 
 ; Constants
-SCREEN_BASE = $0400   ; Base address of screen memory
-COLOR_BASE  = $d800   ; Base address of color memory
-CHAR_COLOR  = $01     ; White text
+.const SCREEN_BASE $0400   ; Base address of screen memory
+.const COLOR_BASE  $d800   ; Base address of color memory
+.const CHAR_COLOR  $01     ; White text
 
 start:
     ldx #0            ; Initialize X register to 0
@@ -30,3 +30,4 @@ hello:
     .byte "L"
     .byte "O"
     .byte 0
+
