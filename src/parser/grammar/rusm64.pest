@@ -1,0 +1,106 @@
+// terminal rules
+
+WHITESPACE = _{ " " | "\t" }
+
+ws = _{ WHITESPACE* }
+nl = _{ "\n" | "\r\n" | "\r" }
+
+chr_literal = @{ "'" ~ (!"'" ~ ANY) ~ "'" }
+hex_literal = @{ "$" ~ ASCII_HEX_DIGIT+ }
+bin_literal = @{ "%" ~ ASCII_BIN_DIGIT+ }
+dec_literal = { ASCII_DIGIT+ }
+
+label_name = { pc | label_str }
+label_str = @{ "_"* ~ ASCII_ALPHA_LOWER ~ ("_" | ASCII_ALPHANUMERIC)* }
+pc = @{ "*" }
+dir_name = @{ "_"* ~ ASCII_ALPHA_LOWER ~ ("_" | ASCII_ALPHANUMERIC)* }
+dir_arg = @{ (!NEWLINE ~ !";" ~ ANY)* }
+identifier = @{ ASCII_ALPHA_UPPER ~ (ASCII_ALPHA_UPPER | ASCII_DIGIT | "_")* }
+opcode = @{ ASCII_ALPHA{3} }
+
+// non-terminal rules
+
+// A program is a list of lines.
+program = { SOI ~ (line)* ~ EOI }
+
+// A line can have a label, an instruction, and a comment,
+// it always ends with a newline, but can be empty.
+line = { ws ~ label? ~ instruction? ~ comment? ~ nl }
+
+// Labels may use any number of _'s as prefix, but must follow
+// with a lowercase letter, followed by any case alphanum.
+// Special case: The "*" referencs the current PC.
+// label expressions must be followed by a ':'.
+label = { label_name ~ ":" }
+
+// Instructions are either ops or directives.
+instruction = { op | directive }
+
+// Ops are opcode (mnemonic) followed by an optional operand.
+op = { opcode ~ operand? }
+
+operand = {
+  immediate
+| indexed_x
+| indexed_y
+| indexed_indirect
+| indirect_indexed
+| indirect
+| abs_zp
+}
+
+immediate = { "#" ~ expr }
+indexed_x = { expr ~ "," ~ "x" }
+indexed_y = { expr ~ "," ~ "y" }
+indirect =  { "(" ~ expr ~ ")" }
+indexed_indirect = { "(" ~ expr ~ "," ~ "x" ~ ")" }
+indirect_indexed = { "(" ~ expr ~ ")" ~ "," ~ "y" }
+abs_zp = { expr }
+
+// Directives start with ., followed by an arbitrary string.
+directive = { "." ~ (
+  const_directive
+| org_directive
+| script_directive
+| generic_directive
+)}
+
+const_directive = { "const" ~ ws ~ identifier ~ ws ~ expr }
+org_directive = { "org" ~ expr }
+script_directive = { "script" ~ rhai_expr }
+generic_directive = { dir_name ~ dir_arg }
+
+// Not COMMENT - need to control where comments may occur.
+comment = { ";" ~ comment_msg }
+comment_msg = @{ (!nl ~ ANY)* }
+
+expr = {
+  literal_expr
+| rhai_expr
+| lower_expr
+| upper_expr
+| ref_expr
+}
+
+rhai_expr = { "{{" ~ rhai_content ~ "}}" }
+rhai_content = @{ (!"{{" ~ !"}}" ~ ANY)* }
+
+literal_expr = {
+  number_literal
+| chr_literal
+}
+
+number_literal = {
+  hex_literal
+| bin_literal
+| dec_literal
+}
+
+ref_expr = {
+  label_name
+| identifier
+}
+
+lower_expr = { "<" ~ expr }
+upper_expr = { ">" ~ expr }
+
