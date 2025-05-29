@@ -21,5 +21,5 @@ name = "rusm"
 path = "src/lib.rs"
 
 [[bin]]
-name = "rusm"
+name = "rusm64"
 path = "src/main.rs"
