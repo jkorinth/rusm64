@@ -26,4 +26,4 @@ pub use opcode::*;
 pub use operand::*;
 
 #[cfg(test)]
-mod tests;
+pub mod tests;

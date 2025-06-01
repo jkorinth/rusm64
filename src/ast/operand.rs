@@ -4,7 +4,7 @@ use derive_more::From;
 use rusm64_macros::EqModAddressing;
 
 #[derive(Clone, Debug, Eq, EqModAddressing, From, Hash, PartialEq)]
-pub struct Operand(AddressingMode, Expr);
+pub struct Operand(pub AddressingMode, pub Expr);
 
 impl Operand {
     #[inline]
@@ -46,6 +46,14 @@ impl OperandBuilder {
                 .expect("cannot build operand without addressing mode"),
             self.expr.expect("cannot build operand without expr"),
         )
+    }
+}
+
+impl From<&Operand> for OperandBuilder {
+    fn from(value: &Operand) -> Self {
+        Self::default()
+            .addressing_mode(value.addressing_mode())
+            .expr(value.expr().clone())
     }
 }
 

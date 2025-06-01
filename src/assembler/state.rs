@@ -1,5 +1,8 @@
 use super::{Addr, AssembleError, LineNum, SourceLocation};
-use crate::ast::{Ast, Expr};
+use crate::{
+    CharLiteral, LiteralExpr, NumberLiteral, RefExpr, RhaiExpr,
+    ast::{Ast, Expr},
+};
 use derive_more::Display;
 use std::collections::HashMap;
 
@@ -12,8 +15,7 @@ pub struct State {
     origin: Addr,
     bin: Vec<u8>,
     ast: Ast,
-    labels: HashMap<String, Addr>,
-    constants: HashMap<String, Addr>,
+    symbols: HashMap<String, i64>,
     errors: Vec<(SourceLocation, AssembleError)>,
 }
 
@@ -27,6 +29,12 @@ impl State {
 
     pub fn loc(&self) -> SourceLocation {
         SourceLocation::from((self.file.clone(), self.line, Some(self.pc)))
+    }
+
+    pub fn reset(&mut self) {
+        self.file = "".into();
+        self.line = 0;
+        self.pc = 0;
     }
 
     #[inline]
@@ -72,33 +80,18 @@ impl State {
     }
 
     #[inline]
-    pub fn label(&self, label: &str) -> Option<u16> {
-        self.labels.get(label).copied()
+    pub fn symbol(&self, name: &str) -> Option<i64> {
+        self.symbols().get(name).copied()
     }
 
     #[inline]
-    pub fn labels(&self) -> &HashMap<String, u16> {
-        &self.labels
+    pub fn symbols(&self) -> &HashMap<String, i64> {
+        &self.symbols
     }
 
     #[inline]
-    pub fn labels_mut(&mut self) -> &mut HashMap<String, u16> {
-        &mut self.labels
-    }
-
-    #[inline]
-    pub fn constant(&self, name: &str) -> Option<u16> {
-        self.constants.get(name).copied()
-    }
-
-    #[inline]
-    pub fn constants(&self) -> &HashMap<String, u16> {
-        &self.constants
-    }
-
-    #[inline]
-    pub fn constants_mut(&mut self) -> &mut HashMap<String, u16> {
-        &mut self.constants
+    pub fn symbols_mut(&mut self) -> &mut HashMap<String, i64> {
+        &mut self.symbols
     }
 
     #[inline]
@@ -117,20 +110,52 @@ impl State {
         &mut self.errors
     }
 
-    #[inline]
-    pub fn eval(&self, expr: &Expr) -> Result<u16, AssembleError> {
-        if let Some(lit) = expr.number_literal_str() {
-            if let Some(stripped) = lit.strip_prefix("$") {
-                return Ok(u16::from_str_radix(stripped, 16)?);
-            } else if let Some(stripped) = lit.strip_prefix("%") {
-                return Ok(u16::from_str_radix(stripped, 2)?);
-            } else {
-                return Ok(u16::from_str_radix(lit, 10)?);
-            }
-        } else if let Some(chr) = expr.char_literal_str() {
-            return Ok((chr.chars().nth(0).unwrap() as u8).into());
+    pub fn eval(&self, expr: &Expr) -> Result<i64, AssembleError> {
+        match expr {
+            Expr::Ref(e) => match e {
+                RefExpr::LabelRef(n) => self
+                    .symbol(n)
+                    .map(|i| i.into())
+                    .ok_or_else(|| AssembleError::UnresolvedSymbol(n.clone())),
+                RefExpr::SymbolRef(n) => self
+                    .symbol(n)
+                    .ok_or_else(|| AssembleError::UnresolvedSymbol(n.clone())),
+            },
+            Expr::Literal(e) => self.eval_literal(e),
+            Expr::Upper(e) => Ok((self.eval(e.expr())? >> 8) & 0xff),
+            Expr::Lower(e) => Ok(self.eval(e.expr())? & 0xff),
+            Expr::Rhai(e) => self.eval_rhai(e),
         }
-        Err(AssembleError::CannotEvaluateExpr(expr.clone()))
+    }
+
+    fn eval_rhai(&self, e: &RhaiExpr) -> Result<i64, AssembleError> {
+        let engine = rhai::Engine::new_raw();
+        let mut scope = self.clone().into();
+        let res = engine.eval_expression_with_scope::<i64>(&mut scope, e.rhai());
+        match res {
+            Ok(v) => Ok(v),
+            Err(err) => match *err {
+                rhai::EvalAltResult::ErrorVariableNotFound(name, _) => {
+                    Err(AssembleError::UnresolvedSymbol(name))
+                }
+                e => Err(AssembleError::RhaiError(format!("{}", e))),
+            },
+        }
+    }
+
+    fn eval_literal(&self, e: &LiteralExpr) -> Result<i64, AssembleError> {
+        match e {
+            LiteralExpr::NumberLiteral(NumberLiteral::HexLiteral(n)) => {
+                Ok(i64::from_str_radix(&n, 16)?)
+            }
+            LiteralExpr::NumberLiteral(NumberLiteral::BinLiteral(n)) => {
+                Ok(i64::from_str_radix(&n, 2)?)
+            }
+            LiteralExpr::NumberLiteral(NumberLiteral::DecLiteral(n)) => {
+                Ok(i64::from_str_radix(&n, 10)?)
+            }
+            LiteralExpr::CharLiteral(c) => Ok(c.to_string().chars().nth(0).unwrap() as i64),
+        }
     }
 
     pub fn line(&self) -> LineNum {
@@ -150,5 +175,89 @@ impl State {
     pub fn with_file(mut self, file: &str) -> Self {
         self.file = file.into();
         self
+    }
+}
+
+impl From<rhai::Scope<'_>> for State {
+    fn from(scope: rhai::Scope) -> Self {
+        let mut state = State::default();
+        for (name, _, value) in scope.iter() {
+            // TODO check duplicates
+            state
+                .symbols_mut()
+                .insert(name.into(), value.as_int().unwrap());
+        }
+        state
+    }
+}
+
+impl From<State> for rhai::Scope<'_> {
+    fn from(value: State) -> Self {
+        let mut scope = rhai::Scope::new();
+        let symbols = value.symbols().clone();
+        for (name, val) in symbols {
+            scope.push_constant(name, val);
+        }
+        scope
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::ast::tests::strategies::*;
+    use proptest::prelude::*;
+
+    pub fn scope_def_strategy() -> impl Strategy<Value = (String, i64)> {
+        (identifier_strategy(), any::<i64>())
+    }
+
+    pub fn scope_strategy() -> impl Strategy<Value = rhai::Scope<'static>> {
+        prop::collection::vec(scope_def_strategy(), 0..100).prop_map(|e| {
+            let mut scope = rhai::Scope::new();
+            for (name, val) in e {
+                if !scope.contains(&name) {
+                    scope.push_constant(name, val);
+                }
+            }
+            scope
+        })
+    }
+
+    pub fn state_strategy() -> impl Strategy<Value = State> {
+        prop::collection::vec(scope_def_strategy(), 0..100).prop_map(|e| {
+            let mut state = State::default();
+            for (name, val) in e {
+                state.symbols_mut().insert(name, val);
+            }
+            state
+        })
+    }
+
+    proptest! {
+        #[test]
+        fn convert_scope_to_state(scope in scope_strategy()) {
+            let state: State = scope.clone().into();
+            println!("state: {:?}", state);
+            for (name, is_constant, value) in scope.iter() {
+                if is_constant {
+                    assert!(state.symbols().contains_key(name), "missing constant {name}");
+                    let state_val = state.symbol(name).unwrap();
+                    assert_eq!(state_val, value.as_int().unwrap(), "state value is {state_val}, but scope value is {value}");
+                }
+            }
+        }
+
+        #[test]
+        fn convert_state_to_scope(state in state_strategy()) {
+            let scope: rhai::Scope = state.clone().into();
+            println!("state: {:?}", state);
+            for (name, value) in state.symbols() {
+                assert!(scope.get(name).is_some(), "missing constant {name}");
+                if let Some(d) = scope.get(name) {
+                        assert_eq!(d.as_int().unwrap(), *value, "scope value is {}, but state value is {value}", d.as_int().unwrap());
+                }
+            }
+        }
     }
 }

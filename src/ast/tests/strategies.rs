@@ -265,8 +265,7 @@ pub fn label_strategy() -> impl Strategy<Value = Label> {
 
 // Strategy for generating comments
 pub fn comment_strategy() -> impl Strategy<Value = Comment> {
-    "\\PC*"
-        .prop_map(|s| Comment::from(format!("; {}", s)))
+    "\\PC*".prop_map(|s| Comment::from(format!("; {}", s)))
 }
 
 // Strategy for generating lines

@@ -1,4 +1,4 @@
-mod assembler;
+pub mod assembler;
 mod ast;
 mod error;
 mod parser;

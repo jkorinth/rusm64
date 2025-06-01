@@ -7,7 +7,7 @@ use rusm64_macros::EqModAddressing;
 
 #[derive(Clone, Debug, Display, Eq, EqModAddressing, From, Hash)]
 #[display("{} {}", _0, _1.as_ref().map(|o| format!("{}", o)).unwrap_or("".to_string()))]
-pub struct Op(Opcode, Option<Operand>);
+pub struct Op(pub Opcode, pub Option<Operand>);
 
 impl Op {
     #[inline]

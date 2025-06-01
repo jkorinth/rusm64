@@ -238,7 +238,7 @@ impl RusmParser {
                     ));
                 }
                 Rule::dec_literal => {
-                    return Ok(NumberLiteral::DecLiteral(t.as_str().into()));
+                    return Ok(NumberLiteral::DecLiteral(t.as_str().trim().to_string()));
                 }
                 _ => {
                     return unexpected_rule!(t.as_rule() => "hex_literal, bin_literal or dec_literal");

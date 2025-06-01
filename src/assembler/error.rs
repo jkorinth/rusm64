@@ -1,4 +1,4 @@
-use crate::ast::{Expr, Op};
+use crate::ast::{AddressingMode, Expr, Op, Opcode};
 use std::num::ParseIntError;
 
 use super::SourceLocation;
@@ -22,6 +22,15 @@ pub enum AssembleError {
 
     #[error("invalid instruction found: {0}")]
     InvalidInstruction(Op),
+
+    #[error("unresolved symbol found: {0}")]
+    UnresolvedSymbol(String),
+
+    #[error("invalid addressing mode {1} for opcode {0}")]
+    InvalidAddressingMode(Opcode, AddressingMode),
+
+    #[error("rhai script error: {0}")]
+    RhaiError(String),
 
     #[error("multiple errors:\n{0}")]
     MultipleErrors(#[from] AssembleErrorList),
