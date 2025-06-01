@@ -1,7 +1,7 @@
 use derive_more::{Display, From};
 
 mod error;
-mod opcodes;
+pub(crate) mod opcodes;
 mod pass;
 mod state;
 

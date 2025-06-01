@@ -1,5 +1,22 @@
-use crate::ast::*;
-use proptest::prelude::*;
+use std::{collections::HashMap, sync::LazyLock};
+
+use crate::{ast::*, opcodes::OPCODE_TBL};
+use proptest::{prelude::*, sample::select};
+
+fn build_valid_addressing_mode_table() -> HashMap<Opcode, Vec<AddressingMode>> {
+    use crate::assembler::opcodes::OPCODE_TBL;
+    let mut m: HashMap<Opcode, Vec<AddressingMode>> = HashMap::new();
+    for &(opcode, addressingmode) in OPCODE_TBL.keys() {
+        if !m.contains_key(&opcode) {
+            m.insert(opcode, vec![]);
+        }
+        m.get_mut(&opcode).unwrap().push(addressingmode);
+    }
+    m
+}
+
+pub static VALID_ADDRESSING_MODES: LazyLock<HashMap<Opcode, Vec<AddressingMode>>> =
+    LazyLock::new(build_valid_addressing_mode_table);
 
 // Strategy for generating valid labels
 pub fn label_name_strategy() -> impl Strategy<Value = String> {
@@ -117,9 +134,21 @@ pub fn addressing_mode_strategy() -> impl Strategy<Value = AddressingMode> {
 }
 
 // Strategy for generating operands
-pub fn operand_strategy() -> impl Strategy<Value = Operand> {
-    (addressing_mode_strategy(), expr_strategy())
-        .prop_map(|(addr_mode, expr)| Operand::from((addr_mode, expr)))
+pub fn operand_strategy(opcode: Opcode) -> impl Strategy<Value = Option<Operand>> {
+    select(VALID_ADDRESSING_MODES.get(&opcode).unwrap().clone()).prop_flat_map(move |addrmode| {
+        let oe = OPCODE_TBL.get(&(opcode, addrmode)).expect(&format!(
+            "VALID_ADDRESSING_MODES table has a bug, {}+{} should have been valid",
+            opcode, addrmode
+        ));
+
+        if oe.size > 1 {
+            expr_strategy()
+                .prop_map(move |e| Some(Operand::from((addrmode, e))))
+                .boxed()
+        } else {
+            Just(None).boxed()
+        }
+    })
 }
 
 // Strategy for generating opcodes
@@ -196,12 +225,14 @@ pub fn opcode_strategy() -> impl Strategy<Value = Opcode> {
 
 // Strategy for generating operations
 pub fn op_strategy() -> impl Strategy<Value = Op> {
-    (opcode_strategy(), proptest::option::of(operand_strategy())).prop_map(|(opcode, operand)| {
-        let mut builder = OpBuilder::default().opcode(opcode);
-        if let Some(op) = operand {
-            builder = builder.operand(op);
-        }
-        builder.build()
+    opcode_strategy().prop_flat_map(|opcode| {
+        operand_strategy(opcode).prop_map(move |operand| {
+            let mut builder = OpBuilder::default().opcode(opcode);
+            if let Some(op) = operand {
+                builder = builder.operand(op);
+            }
+            builder.build()
+        })
     })
 }
 
