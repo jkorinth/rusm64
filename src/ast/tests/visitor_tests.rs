@@ -20,19 +20,23 @@ proptest! {
         let mut collector = NumericCollector::default();
         expr.visit(&mut collector);
 
+        let hex_rx = regex::Regex::new(r"^[0-9a-fA-F]+$").unwrap();
+        let bin_rx = regex::Regex::new(r"^[0-1]+$").unwrap();
+        let dec_rx = regex::Regex::new(r"^[0-9]+$").unwrap();
+
         // Property: all hex literals should start with $
         for hex in &collector.hex_literals {
-            prop_assert!(hex.starts_with('$'));
+            prop_assert!(hex_rx.is_match(hex));
         }
 
         // Property: all binary literals should start with %
         for bin in &collector.bin_literals {
-            prop_assert!(bin.starts_with('%'));
+            prop_assert!(bin_rx.is_match(bin));
         }
 
         // Property: all decimal literals should be numeric
         for dec in &collector.dec_literals {
-            prop_assert!(dec.chars().all(|c| c.is_ascii_digit()));
+            prop_assert!(dec_rx.is_match(dec));
         }
     }
 

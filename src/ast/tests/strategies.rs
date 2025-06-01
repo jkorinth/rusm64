@@ -36,9 +36,9 @@ pub fn identifier_strategy() -> impl Strategy<Value = String> {
 pub fn number_literal_strategy() -> impl Strategy<Value = NumberLiteral> {
     prop_oneof![
         // Hex literals: $FF, $1234, etc.
-        "[0-9A-Fa-f]{1,4}".prop_map(|s| NumberLiteral::HexLiteral(format!("${}", s))),
+        "[0-9A-Fa-f]{1,4}".prop_map(|s| NumberLiteral::HexLiteral(format!("{}", s))),
         // Binary literals: %11110000, etc.
-        "[01]{1,8}".prop_map(|s| NumberLiteral::BinLiteral(format!("%{}", s))),
+        "[01]{1,8}".prop_map(|s| NumberLiteral::BinLiteral(format!("{}", s))),
         // Decimal literals: 123, 456, etc.
         "[0-9]{1,5}".prop_map(NumberLiteral::DecLiteral),
     ]
@@ -46,7 +46,7 @@ pub fn number_literal_strategy() -> impl Strategy<Value = NumberLiteral> {
 
 // Strategy for generating character literals
 pub fn char_literal_strategy() -> impl Strategy<Value = CharLiteral> {
-    r"[a-zA-Z0-9!@#\$%\^&\*\(\)_\+-=]".prop_map(|s| CharLiteral::from(format!("'{}'", s)))
+    r"[a-zA-Z0-9!@#\$%\^&\*\(\)_\+-=]".prop_map(|s| CharLiteral::from(format!("{}", s)))
 }
 
 // Strategy for generating literal expressions
@@ -266,7 +266,6 @@ pub fn label_strategy() -> impl Strategy<Value = Label> {
 // Strategy for generating comments
 pub fn comment_strategy() -> impl Strategy<Value = Comment> {
     "\\PC*"
-        //r"[a-zA-Z0-9 _.,!?\-]*"
         .prop_map(|s| Comment::from(format!("; {}", s)))
 }
 

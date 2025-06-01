@@ -38,11 +38,24 @@ proptest! {
     fn test_number_literal_str_consistency(expr in expr_strategy()) {
         // Property: if number_literal_str returns Some, it should be a valid number format
         if let Some(num_str) = expr.number_literal_str() {
-            prop_assert!(
-                num_str.starts_with('$') ||  // Hex
-                num_str.starts_with('%') ||  // Binary
-                num_str.chars().all(|c| c.is_ascii_digit()) // Decimal
-            );
+            use Expr::*;
+            use LiteralExpr::*;
+            use crate::NumberLiteral::*;
+            let hex = regex::Regex::new(r"^[0-9a-fA-F]+$").unwrap();
+            let bin = regex::Regex::new(r"^[0-1]+$").unwrap();
+            let dec = regex::Regex::new(r"^[0-9]+$").unwrap();
+            match &expr {
+                Literal(NumberLiteral(HexLiteral(_))) => {
+                    prop_assert!(hex.is_match(num_str));
+                }
+                Literal(NumberLiteral(BinLiteral(_))) => {
+                    prop_assert!(bin.is_match(num_str));
+                }
+                Literal(NumberLiteral(DecLiteral(_))) => {
+                    prop_assert!(dec.is_match(num_str));
+                }
+                _ => {}
+            }
         }
     }
 
@@ -50,7 +63,7 @@ proptest! {
     fn test_char_literal_str_consistency(expr in expr_strategy()) {
         // Property: if char_literal_str returns Some, it should be a valid char format
         if let Some(char_str) = expr.char_literal_str() {
-            prop_assert!(char_str.starts_with('\'') && char_str.ends_with('\''));
+            prop_assert_eq!(char_str.len(), 1);
         }
     }
 
