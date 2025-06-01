@@ -57,6 +57,21 @@ impl Expr {
         }
     }
 
+    pub fn numeric_value(&self) -> Option<i64> {
+        use self::LiteralExpr::*;
+        use self::NumberLiteral::*;
+        use Expr::*;
+        match self {
+            Literal(NumberLiteral(BinLiteral(s))) => Some(i64::from_str_radix(s, 2).unwrap()),
+            Literal(NumberLiteral(DecLiteral(s))) => Some(i64::from_str_radix(s, 10).unwrap()),
+            Literal(NumberLiteral(HexLiteral(s))) => Some(i64::from_str_radix(s, 16).unwrap()),
+            Literal(CharLiteral(self::CharLiteral(s))) => {
+                Some((s.chars().nth(0).unwrap() as u8).into())
+            }
+            _ => None,
+        }
+    }
+
     pub fn char_literal_str(&self) -> Option<&str> {
         use self::LiteralExpr::*;
         use Expr::*;
