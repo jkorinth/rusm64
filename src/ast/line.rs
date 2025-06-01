@@ -1,12 +1,18 @@
+use super::EqModAddressing;
 use super::{Comment, Directive, Instruction, Label, Op};
 use derive_more::{Display, From};
+use rusm64_macros::EqModAddressing;
 
-#[derive(Clone, Debug, Display, From, Eq, PartialEq)]
+#[derive(Clone, Debug, Display, From, Eq, EqModAddressing, PartialEq)]
 #[display("{:<8}{:<16}{}",
     _0.as_ref().map(|e| format!("{}", e)).unwrap_or("".to_string()),
     _1.as_ref().map(|e| format!("{}", e)).unwrap_or("".to_string()),
     _2.as_ref().map(|e| format!("{}", e)).unwrap_or("".to_string()))]
-pub struct Line(Option<Label>, Option<Instruction>, Option<Comment>);
+pub struct Line(
+    pub Option<Label>,
+    pub Option<Instruction>,
+    pub Option<Comment>,
+);
 
 impl Line {
     #[inline]

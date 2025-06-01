@@ -1,6 +1,8 @@
+use super::EqModAddressing;
 use derive_more::{Display, From};
+use rusm64_macros::EqModAddressing;
 
-#[derive(Clone, Debug, Display, From, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, Display, From, Eq, EqModAddressing, Hash, PartialEq)]
 #[display(";{}", _0)]
 pub struct Comment(String);
 

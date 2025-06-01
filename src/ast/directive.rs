@@ -1,13 +1,14 @@
+use super::EqModAddressing;
+use derive_more::Display;
 use pest::{Parser, iterators::Pairs};
+use rusm64_macros::EqModAddressing;
 
 use crate::{
     Expr,
     parser::grammar::{ParseError, Rule, RusmParser},
 };
 
-use derive_more::Display;
-
-#[derive(Clone, Debug, Display, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, Display, Eq, EqModAddressing, Hash, PartialEq)]
 pub enum Directive {
     #[display(".org {}", _0)]
     Org(Expr),

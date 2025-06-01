@@ -1,3 +1,4 @@
+use crate::EqModAddressing;
 use derive_more::Display;
 
 #[derive(Debug, Display, Clone, Copy, PartialEq, Eq, Hash)]
@@ -15,4 +16,22 @@ pub enum AddressingMode {
     IndexedIndirect, // Indexed indirect (e.g., LDA ($10,X))
     IndirectIndexed, // Indirect indexed (e.g., LDA ($10),Y)
     Relative,        // Relative addressing for branches (e.g., BNE label)
+}
+
+impl EqModAddressing for AddressingMode {
+    fn eq_mod_addressing(&self, other: &Self) -> bool {
+        use AddressingMode::*;
+        // the following addressing modes can only be differentiated by the
+        // effective operand value; they don't have an explicit syntax that
+        // can be captured by the grammar or the AST
+        match self {
+            Implied => other == &Implied || other == &Accumulator,
+            Absolute | Relative | ZeroPage => {
+                other == &ZeroPage || other == &Absolute || other == &Relative
+            }
+            AbsoluteX | ZeroPageX => other == &ZeroPageX || other == &AbsoluteX,
+            AbsoluteY | ZeroPageY => other == &ZeroPageY || other == &AbsoluteY,
+            _ => self == other,
+        }
+    }
 }

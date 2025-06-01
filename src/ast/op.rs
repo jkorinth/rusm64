@@ -1,9 +1,11 @@
 use super::AddressingMode;
 use super::Opcode;
 use super::Operand;
+use crate::EqModAddressing;
 use derive_more::{Display, From};
+use rusm64_macros::EqModAddressing;
 
-#[derive(Clone, Debug, Display, Eq, From, Hash, PartialEq)]
+#[derive(Clone, Debug, Display, Eq, EqModAddressing, From, Hash)]
 #[display("{} {}", _0, _1.as_ref().map(|o| format!("{}", o)).unwrap_or("".to_string()))]
 pub struct Op(Opcode, Option<Operand>);
 
@@ -36,6 +38,21 @@ impl Op {
                 .map(|o| o.addressing_mode())
                 .unwrap_or_else(|| AddressingMode::Implied),
         )
+    }
+}
+
+impl PartialEq for Op {
+    fn eq(&self, other: &Self) -> bool {
+        self.opcode() == other.opcode()
+            && self.operand().is_some() == other.operand().is_some()
+            && self
+                .operand()
+                .as_ref()
+                .map(|o| {
+                    o.addressing_mode()
+                        .eq_mod_addressing(&other.operand().as_ref().unwrap().addressing_mode())
+                })
+                .unwrap_or(true)
     }
 }
 

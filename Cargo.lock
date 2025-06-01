@@ -605,7 +605,7 @@ dependencies = [
 
 [[package]]
 name = "rusm64"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "clap",
  "derive_more",
@@ -617,7 +617,16 @@ dependencies = [
  "proptest",
  "regex",
  "rhai",
+ "rusm64-macros",
  "thiserror 1.0.69",
+]
+
+[[package]]
+name = "rusm64-macros"
+version = "0.1.0"
+dependencies = [
+ "quote",
+ "syn",
 ]
 
 [[package]]

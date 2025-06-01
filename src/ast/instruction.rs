@@ -1,6 +1,8 @@
+use super::EqModAddressing;
 use derive_more::Display;
+use rusm64_macros::EqModAddressing;
 
-#[derive(Clone, Debug, Display, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, Display, Eq, EqModAddressing, Hash, PartialEq)]
 pub enum Instruction {
     Directive(super::Directive),
     Op(super::Op),

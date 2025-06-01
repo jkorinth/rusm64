@@ -1,7 +1,9 @@
+use super::EqModAddressing;
 use super::{AddressingMode, Expr};
 use derive_more::From;
+use rusm64_macros::EqModAddressing;
 
-#[derive(Clone, Debug, Eq, From, Hash, PartialEq)]
+#[derive(Clone, Debug, Eq, EqModAddressing, From, Hash, PartialEq)]
 pub struct Operand(AddressingMode, Expr);
 
 impl Operand {

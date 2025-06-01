@@ -1,9 +1,11 @@
 use std::fmt::Display;
 
+use super::EqModAddressing;
 use super::Line;
 use derive_more::From;
+use rusm64_macros::EqModAddressing;
 
-#[derive(Clone, Debug, Default, From, Eq, PartialEq)]
+#[derive(Clone, Debug, Default, From, Eq, EqModAddressing, PartialEq)]
 pub struct Ast {
     lines: Vec<Line>,
 }

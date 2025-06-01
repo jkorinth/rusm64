@@ -1,10 +1,13 @@
 use std::hash::Hash;
 
 use derive_more::{Display, From};
+use rusm64_macros::EqModAddressing;
+
+use super::EqModAddressing;
 
 type Bexpr = Box<Expr>;
 
-#[derive(Clone, Debug, Display, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, Display, Eq, EqModAddressing, Hash, PartialEq)]
 #[display("{}", _0)]
 pub enum Expr {
     Rhai(RhaiExpr),
@@ -105,7 +108,7 @@ mod tests {
     }
 }
 
-#[derive(Clone, Debug, Display, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, Display, Eq, EqModAddressing, Hash, PartialEq)]
 #[display("{}", _0)]
 pub enum LiteralExpr {
     NumberLiteral(NumberLiteral),
@@ -124,7 +127,7 @@ impl From<CharLiteral> for LiteralExpr {
     }
 }
 
-#[derive(Clone, Debug, Display, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, Display, Eq, EqModAddressing, Hash, PartialEq)]
 pub enum NumberLiteral {
     #[display("${}", _0)]
     HexLiteral(String),
@@ -134,11 +137,11 @@ pub enum NumberLiteral {
     DecLiteral(String),
 }
 
-#[derive(Clone, Debug, Display, Eq, From, Hash, PartialEq)]
+#[derive(Clone, Debug, Display, Eq, EqModAddressing, From, Hash, PartialEq)]
 #[display("'{}'", _0)]
 pub struct CharLiteral(String);
 
-#[derive(Clone, Debug, Display, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, Display, Eq, EqModAddressing, Hash, PartialEq)]
 pub enum RefExpr {
     #[display("{}", _0)]
     LabelRef(String),
@@ -155,7 +158,7 @@ impl RefExpr {
     }
 }
 
-#[derive(Clone, Debug, Display, Eq, From, Hash, PartialEq)]
+#[derive(Clone, Debug, Display, Eq, EqModAddressing, From, Hash, PartialEq)]
 #[display("<{}", _0)]
 pub struct LowerExpr(Bexpr);
 
@@ -171,7 +174,7 @@ impl LowerExpr {
     }
 }
 
-#[derive(Clone, Debug, Display, Eq, From, Hash, PartialEq)]
+#[derive(Clone, Debug, Display, Eq, EqModAddressing, From, Hash, PartialEq)]
 #[display(">{}", _0)]
 pub struct UpperExpr(Bexpr);
 
@@ -187,7 +190,7 @@ impl UpperExpr {
     }
 }
 
-#[derive(Clone, Debug, Display, Eq, Hash, PartialEq, From)]
+#[derive(Clone, Debug, Display, Eq, EqModAddressing, Hash, PartialEq, From)]
 #[display("{{{{{}}}}}", _0)]
 pub struct RhaiExpr(String);
 

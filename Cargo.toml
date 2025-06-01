@@ -22,6 +22,7 @@ clap = { version = "4.4", features = ["derive"] }
 once_cell = "1.18"
 derive_more = { version = "2.0.1", features = ["full"] }
 rhai = "1.21.0"
+rusm64-macros = { path = "./rusm64-macros" }
 
 [lib]
 name = "rusm"
