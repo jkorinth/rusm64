@@ -36,6 +36,10 @@ impl Ast {
         self.lines.iter()
     }
 
+    pub fn lines_mut(&mut self) -> impl Iterator<Item = &mut Line> {
+        self.lines.iter_mut()
+    }
+
     pub fn line(&self, line_number: usize) -> Option<&Line> {
         self.lines.get(line_number)
     }
