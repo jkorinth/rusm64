@@ -65,10 +65,7 @@ impl RusmAssembler {
             self.state.errors_mut().clear();
             for (j, pass) in &mut self.passes.iter_mut().enumerate() {
                 println!("performing pass #{} iteration #{}", j, iteration);
-                self.state = pass.execute(std::mem::replace(
-                    &mut self.state,
-                    AssemblerState::default(),
-                ));
+                self.state = pass.execute(std::mem::take(&mut self.state));
             }
             cont = if let Some(state) = &last_state {
                 /* *state.ast() != *self.state.ast() ||*/
@@ -81,7 +78,7 @@ impl RusmAssembler {
             }
         }
         // abort if errors persist at the end of the pass loop
-        if self.state.errors().len() > 0 {
+        if !self.state.errors().is_empty() {
             return Err(self.state.errors().clone().into());
         }
         Ok(std::mem::take(&mut self.state))
@@ -111,7 +108,7 @@ impl Default for RusmAssembler {
 
 #[cfg(test)]
 mod tests {
-    use crate::{Instruction, Line, Op, Operand, RusmParser, assembler::state::State};
+    use crate::{RusmParser, assembler::state::State};
     use itertools::Itertools;
 
     use super::{RusmAssembler, pass::Pass};
@@ -186,7 +183,7 @@ mod tests {
         "#;
         println!("src = {src}");
 
-        let ast = RusmParser::from_source(&src).unwrap();
+        let ast = RusmParser::from_source(src).unwrap();
         let state: State = State::from_ast(ast);
         let mut asm = RusmAssembler::new(state).with_passes(vec![
             Pass::resolve_labels_pass().boxed(),
@@ -214,7 +211,7 @@ mod tests {
         "#;
         println!("src = {src}");
 
-        let ast = RusmParser::from_source(&src).unwrap();
+        let ast = RusmParser::from_source(src).unwrap();
         let state: State = State::from_ast(ast);
         let mut asm =
             RusmAssembler::new(state).with_passes(vec![Pass::determine_addressing_pass().boxed()]);

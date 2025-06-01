@@ -1,4 +1,3 @@
-use rhai::EvalAltResult;
 
 use super::{AssembleError, opcodes::OPCODE_TBL, state::State};
 use crate::ast::{
@@ -357,7 +356,7 @@ impl Pass {
                             state.symbols_mut().insert(name.clone(), val);
                         }
                         Err(err) => {
-                            state.error(err.into());
+                            state.error(err);
                         }
                     }
                 }
@@ -436,16 +435,13 @@ impl Pass {
     }
 
     pub fn resolve_rhai_pass() -> Self {
-        Pass::default().with_visit_expr(Box::new(|state, expr| match expr {
-            Expr::Rhai(re) => {
-                let engine = rhai::Engine::new_raw();
-                let mut scope: rhai::Scope<'_> = state.clone().into();
-                let res = engine.eval_expression_with_scope::<i64>(&mut scope, re.rhai());
-                if let Ok(result) = res {
-                    *expr = make_hex_literal(result);
-                }
+        Pass::default().with_visit_expr(Box::new(|state, expr| if let Expr::Rhai(re) = expr {
+            let engine = rhai::Engine::new_raw();
+            let mut scope: rhai::Scope<'_> = state.clone().into();
+            let res = engine.eval_expression_with_scope::<i64>(&mut scope, re.rhai());
+            if let Ok(result) = res {
+                *expr = make_hex_literal(result);
             }
-            _ => {}
         }))
     }
 

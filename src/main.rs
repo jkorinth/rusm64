@@ -2,7 +2,7 @@ use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 use std::process;
 //use rusm::{assemble, assemble_verbose, parse_source, Result};
-use rusm::Result;
+use rusm::{AssemblerPass, Ast, Result, RusmAssembler, RusmParser, assembler::AssemblerState};
 
 #[derive(Parser)]
 #[command(name = "rusm64 - the hyperfluid assembler!")]

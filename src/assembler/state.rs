@@ -1,6 +1,6 @@
 use super::{Addr, AssembleError, LineNum, SourceLocation};
 use crate::{
-    CharLiteral, LiteralExpr, NumberLiteral, RefExpr, RhaiExpr,
+    LiteralExpr, NumberLiteral, RefExpr, RhaiExpr,
     ast::{Ast, Expr},
 };
 use derive_more::Display;
@@ -115,7 +115,6 @@ impl State {
             Expr::Ref(e) => match e {
                 RefExpr::LabelRef(n) => self
                     .symbol(n)
-                    .map(|i| i.into())
                     .ok_or_else(|| AssembleError::UnresolvedSymbol(n.clone())),
                 RefExpr::SymbolRef(n) => self
                     .symbol(n)
@@ -146,13 +145,13 @@ impl State {
     fn eval_literal(&self, e: &LiteralExpr) -> Result<i64, AssembleError> {
         match e {
             LiteralExpr::NumberLiteral(NumberLiteral::HexLiteral(n)) => {
-                Ok(i64::from_str_radix(&n, 16)?)
+                Ok(i64::from_str_radix(n, 16)?)
             }
             LiteralExpr::NumberLiteral(NumberLiteral::BinLiteral(n)) => {
-                Ok(i64::from_str_radix(&n, 2)?)
+                Ok(i64::from_str_radix(n, 2)?)
             }
             LiteralExpr::NumberLiteral(NumberLiteral::DecLiteral(n)) => {
-                Ok(i64::from_str_radix(&n, 10)?)
+                Ok(i64::from_str_radix(n, 10)?)
             }
             LiteralExpr::CharLiteral(c) => Ok(c.to_string().chars().nth(0).unwrap() as i64),
         }

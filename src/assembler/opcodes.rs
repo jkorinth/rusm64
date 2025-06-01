@@ -740,5 +740,5 @@ pub fn get_opcode_byte(opcode: Opcode, addrmode: AddressingMode) -> Result<u8, A
     OPCODE_TBL
         .get(&(opcode, addrmode))
         .map(|x| x.byte)
-        .ok_or_else(|| AssembleError::InvalidAddressingMode(opcode, addrmode))
+        .ok_or(AssembleError::InvalidAddressingMode(opcode, addrmode))
 }

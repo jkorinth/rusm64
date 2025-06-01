@@ -7,9 +7,7 @@ fn build_valid_addressing_mode_table() -> HashMap<Opcode, Vec<AddressingMode>> {
     use crate::assembler::opcodes::OPCODE_TBL;
     let mut m: HashMap<Opcode, Vec<AddressingMode>> = HashMap::new();
     for &(opcode, addressingmode) in OPCODE_TBL.keys() {
-        if !m.contains_key(&opcode) {
-            m.insert(opcode, vec![]);
-        }
+        m.entry(opcode).or_insert_with(std::vec::Vec::new);
         m.get_mut(&opcode).unwrap().push(addressingmode);
     }
     m
@@ -36,9 +34,9 @@ pub fn identifier_strategy() -> impl Strategy<Value = String> {
 pub fn number_literal_strategy() -> impl Strategy<Value = NumberLiteral> {
     prop_oneof![
         // Hex literals: $FF, $1234, etc.
-        "[0-9A-Fa-f]{1,4}".prop_map(|s| NumberLiteral::HexLiteral(format!("{}", s))),
+        "[0-9A-Fa-f]{1,4}".prop_map(|s| NumberLiteral::HexLiteral(s.to_string())),
         // Binary literals: %11110000, etc.
-        "[01]{1,8}".prop_map(|s| NumberLiteral::BinLiteral(format!("{}", s))),
+        "[01]{1,8}".prop_map(|s| NumberLiteral::BinLiteral(s.to_string())),
         // Decimal literals: 123, 456, etc.
         "[0-9]{1,5}".prop_map(NumberLiteral::DecLiteral),
     ]
@@ -46,7 +44,7 @@ pub fn number_literal_strategy() -> impl Strategy<Value = NumberLiteral> {
 
 // Strategy for generating character literals
 pub fn char_literal_strategy() -> impl Strategy<Value = CharLiteral> {
-    r"[a-zA-Z0-9!@#\$%\^&\*\(\)_\+-=]".prop_map(|s| CharLiteral::from(format!("{}", s)))
+    r"[a-zA-Z0-9!@#\$%\^&\*\(\)_\+-=]".prop_map(|s| CharLiteral::from(s.to_string()))
 }
 
 // Strategy for generating literal expressions
@@ -136,10 +134,8 @@ pub fn addressing_mode_strategy() -> impl Strategy<Value = AddressingMode> {
 // Strategy for generating operands
 pub fn operand_strategy(opcode: Opcode) -> impl Strategy<Value = Option<Operand>> {
     select(VALID_ADDRESSING_MODES.get(&opcode).unwrap().clone()).prop_flat_map(move |addrmode| {
-        let oe = OPCODE_TBL.get(&(opcode, addrmode)).expect(&format!(
-            "VALID_ADDRESSING_MODES table has a bug, {}+{} should have been valid",
-            opcode, addrmode
-        ));
+        let oe = OPCODE_TBL.get(&(opcode, addrmode)).unwrap_or_else(|| panic!("VALID_ADDRESSING_MODES table has a bug, {}+{} should have been valid",
+            opcode, addrmode));
 
         if oe.size > 1 {
             expr_strategy()
