@@ -1,4 +1,3 @@
-
 use std::fmt::Display;
 use std::sync::LazyLock;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -137,8 +136,8 @@ proptest! {
         match RusmParser::from_source(&src) {
             Ok(re_ast) => {
                 println!("{}\nre-AST:\n{:?}\nre-.asm:\n{}\n{}", "*".repeat(80), ast, src, "_".repeat(80));
-                if ast != re_ast {
-                    let prefix = format!("ex_{}", COUNTER_EXAMPLE_N.fetch_add(1, Ordering::SeqCst));
+                if !ast.eq_mod_addressing(&re_ast) {
+                    let prefix = format!("ex_{:04}", COUNTER_EXAMPLE_N.fetch_add(1, Ordering::SeqCst));
                     let _ = std::fs::write(format!("{}.orig.asm", prefix), src);
                     let _ = std::fs::write(format!("{}.parsed.asm", prefix), format!("{}", re_ast));
                     println!("programs parsed to different ASTs, saved them in {}.orig.asm and {}.parsed.asm",
@@ -147,8 +146,8 @@ proptest! {
                 assert_eq!(ast, re_ast);
             }
             Err(e) => {
-                let prefix = format!("ex_{}", COUNTER_EXAMPLE_N.fetch_add(1, Ordering::SeqCst));
-                let _ = std::fs::write(format!("{}.orig.asm", prefix), src);
+                let prefix = format!("ex_{:04}", COUNTER_EXAMPLE_N.fetch_add(1, Ordering::SeqCst));
+                let _ = std::fs::write(format!("{}.unparseable.asm", prefix), src);
                 println!("parsing generated asm failed: {}\nWrote {}.unparseable.asm.", e, prefix);
             }
         }
