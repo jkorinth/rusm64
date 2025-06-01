@@ -181,7 +181,12 @@ impl RusmParser {
                 }
                 Rule::chr_literal => {
                     return Ok(LiteralExpr::CharLiteral(CharLiteral::from(
-                        t.as_str().to_string(),
+                        t.as_str()
+                            .strip_prefix("'")
+                            .unwrap_or(t.as_str())
+                            .strip_suffix("'")
+                            .unwrap_or(t.as_str())
+                            .to_string(),
                     )));
                 }
                 _ => {
@@ -217,10 +222,20 @@ impl RusmParser {
         if let Some(t) = pairs.into_iter().next() {
             match t.as_rule() {
                 Rule::hex_literal => {
-                    return Ok(NumberLiteral::HexLiteral(t.as_str().into()));
+                    return Ok(NumberLiteral::HexLiteral(
+                        t.as_str()
+                            .strip_prefix("$")
+                            .unwrap_or(t.as_str())
+                            .to_string(),
+                    ));
                 }
                 Rule::bin_literal => {
-                    return Ok(NumberLiteral::BinLiteral(t.as_str().into()));
+                    return Ok(NumberLiteral::BinLiteral(
+                        t.as_str()
+                            .strip_prefix("%")
+                            .unwrap_or(t.as_str())
+                            .to_string(),
+                    ));
                 }
                 Rule::dec_literal => {
                     return Ok(NumberLiteral::DecLiteral(t.as_str().into()));
