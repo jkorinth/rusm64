@@ -2,7 +2,7 @@ use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 use std::process;
 //use rusm::{assemble, assemble_verbose, parse_source, Result};
-use rusm::{AssemblerPass, Ast, Result, RusmAssembler, RusmParser, assembler::AssemblerState};
+use rusm::{Ast, Result, RusmAssembler, RusmParser, assembler::AssemblerState};
 
 #[derive(Parser)]
 #[command(name = "rusm64 - the hyperfluid assembler!")]
@@ -78,28 +78,12 @@ fn main() {
 }
 
 fn assemble_file(input_path: &PathBuf, output_path: &PathBuf, verbose: bool) -> Result<()> {
-    /*
-    let source = fs::read_to_string(input_path)?;
-    let ast = parse_source(&source)?;
-
-    if verbose {
-        println!("Parsed AST:");
-        println!("{:#?}", ast);
-    }
-
-    let binary = if verbose {
-        assemble_verbose(&ast)?
-    } else {
-        assemble(&ast)?
-    };
-
-    if verbose {
-        println!("Generated {} bytes of machine code", binary.len());
-        print_binary_dump(&binary, 16);
-    }
-
-    fs::write(output_path, binary)?;
-    */
+    let ast = parse_file(input_path).unwrap();
+    let state: AssemblerState = AssemblerState::from_ast(ast);
+    let mut asm = RusmAssembler::new(state);
+    let res = asm.execute().unwrap();
+    println!("Result state:\n{:#}", res);
+    println!("Result AST:\n{:#}", res.ast());
     Ok(())
 }
 
@@ -134,11 +118,11 @@ fn print_binary_dump(data: &[u8], bytes_per_line: usize) {
     }
 }
 
-fn parse_file(input_path: &PathBuf) -> Result<()> {
-    /*
-    let source = fs::read_to_string(input_path)?;
-    let ast = parse_source(&source)?;
+fn parse_file(input_path: &PathBuf) -> Result<Ast> {
+    let source = std::fs::read_to_string(input_path).unwrap();
+    let ast = RusmParser::from_source(&source)?;
     println!("{:#?}", ast);
-    */
-    Ok(())
+    println!("\n\n");
+    println!("{}", ast);
+    Ok(ast)
 }
