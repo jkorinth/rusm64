@@ -53,14 +53,14 @@ impl std::fmt::Display for Operand {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         use AddressingMode::*;
         let m = match self.addressing_mode() {
-            Implied => format!("{}", self.expr()),
+            Implied | Accumulator => format!("{}", self.expr()),
             Immediate => format!("#{}", self.expr()),
             Indirect => format!("({})", self.expr()),
-            AbsoluteX => format!("{}, x", self.expr()),
-            AbsoluteY => format!("{}, y", self.expr()),
+            Absolute | ZeroPage | Relative => format!("{}", self.expr()),
+            AbsoluteX | ZeroPageX => format!("{}, x", self.expr()),
+            AbsoluteY | ZeroPageY => format!("{}, y", self.expr()),
             IndexedIndirect => format!("({}, x)", self.expr()),
             IndirectIndexed => format!("({}), y", self.expr()),
-            a => format!("!! unknown addressing mode: {} !!", a),
         };
         f.write_str(&m)
     }
