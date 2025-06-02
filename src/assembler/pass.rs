@@ -238,14 +238,14 @@ impl VisitorMut<State> for Pass {
             .map(|o| o.addressing_mode())
             .unwrap_or(AddressingMode::Implied);
 
+        if let Some(f) = self.f_visit_op.as_ref() {
+            f(state, op)
+        }
+
         if let Some(oce) = OPCODE_TBL.get(&(op.opcode(), am)) {
             state.inc_pc(oce.size as u16);
         } else {
             state.error(AssembleError::InvalidInstruction(op.clone()));
-        }
-
-        if let Some(f) = self.f_visit_op.as_ref() {
-            f(state, op)
         }
     }
 
