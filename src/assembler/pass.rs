@@ -1,5 +1,8 @@
-
-use super::{AssembleError, opcodes::OPCODE_TBL, state::State};
+use super::{
+    AssembleError,
+    opcodes::{OPCODE_TBL, VALID_ADDRESSING_MODES},
+    state::State,
+};
 use crate::ast::{
     visitors::{VisitableMut, VisitorMut},
     *,
@@ -381,66 +384,77 @@ impl Pass {
     }
 
     pub fn determine_addressing_pass() -> Self {
-        Pass::default().with_visit_operand(Box::new(|_, operand| {
-            if let Some(val) = operand.expr().numeric_value() {
-                use AddressingMode::*;
-                let is_zero_page = val >= u8::MIN.into() && val <= u8::MAX.into();
-                match operand.addressing_mode() {
-                    Absolute => {
-                        if is_zero_page {
-                            *operand = OperandBuilder::from(&*operand)
-                                .addressing_mode(ZeroPage)
-                                .build();
+        Pass::default().with_visit_op(Box::new(|_, op| match op {
+            Op(opcode, Some(operand)) => {
+                if let Some(val) = operand.expr().numeric_value() {
+                    use AddressingMode::*;
+                    let is_zero_page = val >= u8::MIN.into() && val <= u8::MAX.into();
+                    let supports = |addrmode| {
+                        VALID_ADDRESSING_MODES
+                            .get(&opcode)
+                            .unwrap_or(&vec![])
+                            .contains(&addrmode)
+                    };
+                    match operand.addressing_mode() {
+                        Absolute => {
+                            if is_zero_page && supports(ZeroPage) {
+                                *operand = OperandBuilder::from(&*operand)
+                                    .addressing_mode(ZeroPage)
+                                    .build();
+                            }
                         }
-                    }
-                    AbsoluteX => {
-                        if is_zero_page {
-                            *operand = OperandBuilder::from(&*operand)
-                                .addressing_mode(ZeroPageX)
-                                .build();
+                        AbsoluteX => {
+                            if is_zero_page && supports(ZeroPageX) {
+                                *operand = OperandBuilder::from(&*operand)
+                                    .addressing_mode(ZeroPageX)
+                                    .build();
+                            }
                         }
-                    }
-                    AbsoluteY => {
-                        if is_zero_page {
-                            *operand = OperandBuilder::from(&*operand)
-                                .addressing_mode(ZeroPageY)
-                                .build();
+                        AbsoluteY => {
+                            if is_zero_page && supports(ZeroPageY) {
+                                *operand = OperandBuilder::from(&*operand)
+                                    .addressing_mode(ZeroPageY)
+                                    .build();
+                            }
                         }
-                    }
-                    ZeroPage => {
-                        if !is_zero_page {
-                            *operand = OperandBuilder::from(&*operand)
-                                .addressing_mode(Absolute)
-                                .build();
+                        ZeroPage => {
+                            if !is_zero_page && supports(Absolute) {
+                                *operand = OperandBuilder::from(&*operand)
+                                    .addressing_mode(Absolute)
+                                    .build();
+                            }
                         }
-                    }
-                    ZeroPageX => {
-                        if !is_zero_page {
-                            *operand = OperandBuilder::from(&*operand)
-                                .addressing_mode(AbsoluteX)
-                                .build();
+                        ZeroPageX => {
+                            if !is_zero_page && supports(AbsoluteX) {
+                                *operand = OperandBuilder::from(&*operand)
+                                    .addressing_mode(AbsoluteX)
+                                    .build();
+                            }
                         }
-                    }
-                    ZeroPageY => {
-                        if !is_zero_page {
-                            *operand = OperandBuilder::from(&*operand)
-                                .addressing_mode(AbsoluteX)
-                                .build();
+                        ZeroPageY => {
+                            if !is_zero_page && supports(AbsoluteY) {
+                                *operand = OperandBuilder::from(&*operand)
+                                    .addressing_mode(AbsoluteX)
+                                    .build();
+                            }
                         }
+                        _ => {}
                     }
-                    _ => {}
                 }
             }
+            _ => {}
         }))
     }
 
     pub fn resolve_rhai_pass() -> Self {
-        Pass::default().with_visit_expr(Box::new(|state, expr| if let Expr::Rhai(re) = expr {
-            let engine = rhai::Engine::new_raw();
-            let mut scope: rhai::Scope<'_> = state.clone().into();
-            let res = engine.eval_expression_with_scope::<i64>(&mut scope, re.rhai());
-            if let Ok(result) = res {
-                *expr = make_hex_literal(result);
+        Pass::default().with_visit_expr(Box::new(|state, expr| {
+            if let Expr::Rhai(re) = expr {
+                let engine = rhai::Engine::new_raw();
+                let mut scope: rhai::Scope<'_> = state.clone().into();
+                let res = engine.eval_expression_with_scope::<i64>(&mut scope, re.rhai());
+                if let Ok(result) = res {
+                    *expr = make_hex_literal(result);
+                }
             }
         }))
     }
