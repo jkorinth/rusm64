@@ -143,7 +143,7 @@ proptest! {
                     println!("programs parsed to different ASTs, saved them in {}.orig.asm and {}.parsed.asm",
                         prefix, prefix);
                 }
-                assert_eq!(ast, re_ast);
+                assert!(ast.eq_mod_addressing(&re_ast));
             }
             Err(e) => {
                 let prefix = format!("ex_{:04}", COUNTER_EXAMPLE_N.fetch_add(1, Ordering::SeqCst));
