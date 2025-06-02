@@ -18,7 +18,7 @@ proptest! {
         // Property: All references found should be valid identifiers
         for reference in &refs {
             prop_assert!(!reference.is_empty());
-            prop_assert!(reference.chars().all(|c| c.is_alphanumeric() || c == '_'));
+            prop_assert!(reference.chars().all(|c| c.is_alphanumeric() || c == '_' || c == '.'));
         }
 
         // Property: References should match what we expect from manual inspection

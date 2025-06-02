@@ -18,7 +18,7 @@ pub static VALID_ADDRESSING_MODES: LazyLock<HashMap<Opcode, Vec<AddressingMode>>
 
 // Strategy for generating valid labels
 pub fn label_name_strategy() -> impl Strategy<Value = String> {
-    "[a-z_][a-zA-Z0-9_]*"
+    "[_.]*[a-z][a-zA-Z0-9_]*"
         .prop_map(|s| s.to_string())
         .prop_filter("non-empty label_name", |s| !s.is_empty())
 }
