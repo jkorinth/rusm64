@@ -742,3 +742,16 @@ pub fn get_opcode_byte(opcode: Opcode, addrmode: AddressingMode) -> Result<u8, A
         .map(|x| x.byte)
         .ok_or(AssembleError::InvalidAddressingMode(opcode, addrmode))
 }
+
+fn build_valid_addressing_mode_table() -> HashMap<Opcode, Vec<AddressingMode>> {
+    use crate::assembler::opcodes::OPCODE_TBL;
+    let mut m: HashMap<Opcode, Vec<AddressingMode>> = HashMap::new();
+    for &(opcode, addressingmode) in OPCODE_TBL.keys() {
+        m.entry(opcode).or_insert_with(std::vec::Vec::new);
+        m.get_mut(&opcode).unwrap().push(addressingmode);
+    }
+    m
+}
+
+pub static VALID_ADDRESSING_MODES: LazyLock<HashMap<Opcode, Vec<AddressingMode>>> =
+    LazyLock::new(build_valid_addressing_mode_table);
