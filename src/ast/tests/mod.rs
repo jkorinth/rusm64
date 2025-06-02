@@ -97,7 +97,14 @@ proptest! {
     #[test]
     fn number_of_lines_matches_source(ast in ast_strategy()) {
         let src = format!("{}", ast);
-        let lines = src.split("\n").collect::<Vec<_>>();
+        let lines = src.split("\n").collect::<Vec<_>>()
+            .drain(..)
+            .filter(|l| l.is_empty())
+            .collect::<Vec<_>>();
+        if lines.len() != ast.lines().count() {
+            println!("original AST: {:#?}", ast);
+            println!("source: <{}>", src);
+        }
         assert_eq!(lines.len(), ast.lines().count());
     }
 }

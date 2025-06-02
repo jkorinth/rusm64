@@ -20,11 +20,17 @@ impl RusmParser {
         if let Some(t) = pairs.into_iter().next() {
             match t.as_rule() {
                 Rule::program => {
-                    let lines = t
+                    let mut lines = t
                         .into_inner()
                         .map(Self::parse_line)
                         .collect::<Result<Vec<_>, _>>()?;
-                    return Ok(Ast::from(lines));
+
+                    return Ok(Ast::from(
+                        lines
+                            .drain(..)
+                            .filter(|l| *l != Line(None, None, None))
+                            .collect::<Vec<_>>(),
+                    ));
                 }
                 _ => {
                     return unexpected_rule!(t.as_rule() => "program");

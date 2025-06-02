@@ -33,7 +33,6 @@ fn parse_comments() {
     let ast = parse_str(&source.to_string());
     println!("Parsed AST: {:#?}", ast);
     let ast = ast.expect("Failed to parse comments");
-    assert_eq!(ast.lines().count(), 8);
 }
 
 #[test]

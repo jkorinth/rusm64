@@ -221,7 +221,7 @@ mod tests {
         println!("new AST: {:#?}", state.ast());
         use crate::ast::*;
         assert!(matches!(
-            state.ast().line(1),
+            state.ast().line(0),
             Some(Line(
                 _,
                 Some(Instruction::Op(Op(

@@ -3,8 +3,8 @@ use super::{Comment, Directive, Instruction, Label, Op};
 use derive_more::{Display, From};
 use rusm64_macros::EqModAddressing;
 
-#[derive(Clone, Debug, Display, From, Eq, EqModAddressing, PartialEq)]
-#[display("{:<8}{:<16}{}",
+#[derive(Clone, Debug, Default, Display, From, Eq, EqModAddressing, PartialEq)]
+#[display("{:<8}{:<16}{}\n",
     _0.as_ref().map(|e| format!("{}", e)).unwrap_or("".to_string()),
     _1.as_ref().map(|e| format!("{}", e)).unwrap_or("".to_string()),
     _2.as_ref().map(|e| format!("{}", e)).unwrap_or("".to_string()))]
@@ -57,6 +57,11 @@ impl Line {
             Some(Instruction::Op(op)) => Some(op),
             _ => None,
         }
+    }
+
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.0.is_none() && self.1.is_none() && self.2.is_none()
     }
 }
 

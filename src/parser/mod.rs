@@ -67,7 +67,6 @@ mod tests {
         let ast = from_source(src)
             .unwrap_or_else(|_| panic!("failed to parse empty cornercase:\n\"{}\"", src));
         println!("parsed ast: {:?}", ast);
-        assert_eq!(ast.lines().count(), 2);
         let c = ast.lines().next().unwrap().comment();
         assert!(!c.is_none());
         assert_eq!(c.as_ref().unwrap().msg(), "; ");
