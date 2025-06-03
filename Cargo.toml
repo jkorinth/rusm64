@@ -1,6 +1,6 @@
 [package]
 name = "rusm64"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2024"
 description = "MOS/Commodore C64 assembler."
 authors = [ "Jens Korinth <jens.korinth@tuta.io>" ]
