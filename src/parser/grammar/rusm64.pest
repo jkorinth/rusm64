@@ -82,7 +82,7 @@ expr = {
 | ref_expr
 }
 
-rhai_expr = { "{{" ~ rhai_content ~ "}}" }
+rhai_expr = ${ "{{" ~ rhai_content ~ "}}" }
 rhai_content = @{ (!"{{" ~ !"}}" ~ ANY)* }
 
 literal_expr = {

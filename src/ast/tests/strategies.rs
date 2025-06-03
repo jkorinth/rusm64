@@ -1,20 +1,8 @@
-use std::{collections::HashMap, sync::LazyLock};
-
-use crate::{ast::*, opcodes::OPCODE_TBL};
+use crate::{
+    ast::*,
+    opcodes::{OPCODE_TBL, VALID_ADDRESSING_MODES},
+};
 use proptest::{prelude::*, sample::select};
-
-fn build_valid_addressing_mode_table() -> HashMap<Opcode, Vec<AddressingMode>> {
-    use crate::assembler::opcodes::OPCODE_TBL;
-    let mut m: HashMap<Opcode, Vec<AddressingMode>> = HashMap::new();
-    for &(opcode, addressingmode) in OPCODE_TBL.keys() {
-        m.entry(opcode).or_insert_with(std::vec::Vec::new);
-        m.get_mut(&opcode).unwrap().push(addressingmode);
-    }
-    m
-}
-
-pub static VALID_ADDRESSING_MODES: LazyLock<HashMap<Opcode, Vec<AddressingMode>>> =
-    LazyLock::new(build_valid_addressing_mode_table);
 
 // Strategy for generating valid labels
 pub fn label_name_strategy() -> impl Strategy<Value = String> {
@@ -66,7 +54,7 @@ pub fn ref_expr_strategy() -> impl Strategy<Value = RefExpr> {
 // Strategy for generating rhai script expressions
 // Note: testing actual Rhai script is out of scope.
 pub fn rhai_expr_strategy() -> impl Strategy<Value = RhaiExpr> {
-    "\\PC*".prop_map(|e| RhaiExpr::from(e.to_string()))
+    r"[a-zA-Z0-9!@#\$%\^&\*\(\)_\+-= \t\n]".prop_map(|e| RhaiExpr::from(e.to_string()))
 }
 
 // Strategy for generating upper byte expressions
@@ -134,8 +122,12 @@ pub fn addressing_mode_strategy() -> impl Strategy<Value = AddressingMode> {
 // Strategy for generating operands
 pub fn operand_strategy(opcode: Opcode) -> impl Strategy<Value = Option<Operand>> {
     select(VALID_ADDRESSING_MODES.get(&opcode).unwrap().clone()).prop_flat_map(move |addrmode| {
-        let oe = OPCODE_TBL.get(&(opcode, addrmode)).unwrap_or_else(|| panic!("VALID_ADDRESSING_MODES table has a bug, {}+{} should have been valid",
-            opcode, addrmode));
+        let oe = OPCODE_TBL.get(&(opcode, addrmode)).unwrap_or_else(|| {
+            panic!(
+                "VALID_ADDRESSING_MODES table has a bug, {}+{} should have been valid",
+                opcode, addrmode
+            )
+        });
 
         if oe.size > 1 {
             expr_strategy()
@@ -261,7 +253,7 @@ pub fn label_strategy() -> impl Strategy<Value = Label> {
 
 // Strategy for generating comments
 pub fn comment_strategy() -> impl Strategy<Value = Comment> {
-    "\\PC*".prop_map(|s| Comment::from(format!("; {}", s)))
+    r"[a-zA-Z0-9!@#\$%\^&\*\(\)_\+-=]".prop_map(|e| Comment::from(e.to_string()))
 }
 
 // Strategy for generating lines

@@ -23,7 +23,7 @@ static REF_LABEL: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"[a-z_]([a-zA-Z
 static REF_SYMBOL: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"[A-Z_]([a-zA-Z0-9_])*").unwrap());
 
-static RHAI: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\{\{.*\}\}").unwrap());
+static RHAI: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\{\{(?s).*\}\}").unwrap());
 
 static LABEL: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"[a-z_][a-zA-Z0-9_]*:\s*").unwrap());
 
