@@ -29,6 +29,9 @@ pub enum AssembleError {
     #[error("invalid addressing mode {1} for opcode {0}")]
     InvalidAddressingMode(Opcode, AddressingMode),
 
+    #[error("cannot use operand value {1} with addressing_mode {0}")]
+    OperandTooLarge(AddressingMode, i64),
+
     #[error("rhai script error: {0}")]
     RhaiError(String),
 

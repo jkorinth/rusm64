@@ -1,4 +1,4 @@
-use super::{Addr, AssembleError, LineNum, SourceLocation};
+use super::{Addr, AssembleError, Bin, LineNum, SourceLocation};
 use crate::{
     LiteralExpr, NumberLiteral, RefExpr, RhaiExpr,
     ast::{Ast, Expr},
@@ -13,7 +13,7 @@ pub struct State {
     line: LineNum,
     pc: Addr,
     origin: Addr,
-    bin: Vec<u8>,
+    bin: Bin,
     ast: Ast,
     symbols: HashMap<String, i64>,
     errors: Vec<(SourceLocation, AssembleError)>,
@@ -35,6 +35,8 @@ impl State {
         self.file = "".into();
         self.line = 0;
         self.pc = 0;
+        self.bin.clear();
+        self.bin.resize(64 * 1024, 0xea);
     }
 
     #[inline]
@@ -60,12 +62,12 @@ impl State {
     }
 
     #[inline]
-    pub fn bin(&self) -> &Vec<u8> {
+    pub fn bin(&self) -> &Bin {
         &self.bin
     }
 
     #[inline]
-    pub fn bin_mut(&mut self) -> &mut Vec<u8> {
+    pub fn bin_mut(&mut self) -> &mut Bin {
         &mut self.bin
     }
 

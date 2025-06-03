@@ -1,10 +1,12 @@
 use derive_more::{Display, From};
 
+mod bin;
 mod error;
 pub(crate) mod opcodes;
 mod pass;
 mod state;
 
+pub use bin::Bin;
 pub use error::AssembleError;
 pub use error::AssembleErrorList;
 pub use pass::Pass as AssemblerPass;
@@ -81,10 +83,12 @@ impl RusmAssembler {
         if !self.state.errors().is_empty() {
             return Err(self.state.errors().clone().into());
         }
+        // shrink binary to minimum size
+        self.state.bin_mut().shrink_to_fit();
         Ok(std::mem::take(&mut self.state))
     }
 
-    pub fn assemble(&mut self) -> Result<Vec<u8>, AssembleError> {
+    pub fn assemble(&mut self) -> Result<Bin, AssembleError> {
         self.state = self.execute()?;
         Ok(self.state.bin().clone())
     }
