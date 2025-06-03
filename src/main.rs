@@ -1,6 +1,6 @@
 use clap::{Parser, Subcommand};
-use std::path::PathBuf;
 use std::process;
+use std::{io::Write, path::PathBuf};
 //use rusm::{assemble, assemble_verbose, parse_source, Result};
 use rusm::{Ast, Result, RusmAssembler, RusmParser, assembler::AssemblerState};
 
@@ -84,6 +84,12 @@ fn assemble_file(input_path: &PathBuf, output_path: &PathBuf, verbose: bool) -> 
     let res = asm.execute().unwrap();
     println!("Result state:\n{:#}", res);
     println!("Result AST:\n{:#}", res.ast());
+    let mut file = std::fs::OpenOptions::new()
+        .write(true)
+        .create(true)
+        .open(output_path)
+        .unwrap();
+    file.write_all(&res.bin().prg()).unwrap();
     Ok(())
 }
 
