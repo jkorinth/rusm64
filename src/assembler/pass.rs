@@ -462,6 +462,28 @@ impl Pass {
     pub fn generate_code_pass() -> Self {
         Pass::default().with_visit_op(Box::new(|state, op| {
             let (opcode, addrmode) = op.as_opaddr();
+            if let Some(oe) = OPCODE_TBL.get(&(opcode, addrmode)) {
+                let pc = state.pc() as usize;
+                state.bin_mut()[pc] = oe.byte;
+                let x = op
+                    .operand()
+                    .as_ref()
+                    .map(|oper| oper.expr().numeric_value())
+                    .flatten()
+                    .unwrap_or(0);
+                match oe.size {
+                    2 => {
+                        state.bin_mut()[pc + 1] = x as u8;
+                    }
+                    3 => {
+                        state.bin_mut()[pc + 1] = x as u8;
+                        state.bin_mut()[pc + 2] = (x >> 8) as u8;
+                    }
+                    _ => {}
+                }
+            } else {
+                state.error(AssembleError::InvalidInstruction(op.clone()));
+            }
         }))
     }
 }
