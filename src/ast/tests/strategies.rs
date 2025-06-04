@@ -230,6 +230,9 @@ pub fn directive_strategy() -> impl Strategy<Value = Directive> {
         expr_strategy().prop_map(Directive::Org),
         (identifier_strategy(), expr_strategy())
             .prop_map(|(name, expr)| Directive::Const(name, expr)),
+        expr_strategy().prop_map(Directive::Byte),
+        expr_strategy().prop_map(Directive::Word),
+        expr_strategy().prop_map(Directive::Dword),
         (
             identifier_strategy(),
             proptest::option::of(r"[a-zA-Z0-9_]+")

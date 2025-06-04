@@ -214,8 +214,11 @@ impl VisitorMut<State> for Pass {
     }
 
     fn visit_directive_mut(&mut self, directive: &mut Directive, state: &mut State) {
-        if let Directive::Org(e) = directive {
-            match state.eval(e) {
+        if let Some(f) = self.f_visit_directive.as_ref() {
+            f(state, directive)
+        }
+        match directive {
+            Directive::Org(e) => match state.eval(e) {
                 Ok(addr) => {
                     state.set_pc(addr.try_into().unwrap());
                     state.set_origin(addr.try_into().unwrap());
@@ -223,10 +226,17 @@ impl VisitorMut<State> for Pass {
                 Err(e) => {
                     state.error(e);
                 }
+            },
+            Directive::Byte(_) => {
+                state.inc_pc(1);
             }
-        }
-        if let Some(f) = self.f_visit_directive.as_ref() {
-            f(state, directive)
+            Directive::Word(_) => {
+                state.inc_pc(2);
+            }
+            Directive::Dword(_) => {
+                state.inc_pc(4);
+            }
+            _ => {}
         }
     }
 
@@ -460,30 +470,62 @@ impl Pass {
     }
 
     pub fn generate_code_pass() -> Self {
-        Pass::default().with_visit_op(Box::new(|state, op| {
-            let (opcode, addrmode) = op.as_opaddr();
-            if let Some(oe) = OPCODE_TBL.get(&(opcode, addrmode)) {
+        Pass::default()
+            .with_visit_directive(Box::new(|state, dir| {
                 let pc = state.pc() as usize;
-                state.bin_mut()[pc] = oe.byte;
-                let x = op
-                    .operand()
-                    .as_ref()
-                    .map(|oper| oper.expr().numeric_value())
-                    .flatten()
-                    .unwrap_or(0);
-                match oe.size {
-                    2 => {
-                        state.bin_mut()[pc + 1] = x as u8;
+                match dir {
+                    Directive::Byte(e) => {
+                        if let Some(v) = e.numeric_value() {
+                            state.bin_mut()[pc] = v as u8;
+                        } else {
+                            state.error(AssembleError::CannotEvaluateExpr(e.clone()));
+                        }
                     }
-                    3 => {
-                        state.bin_mut()[pc + 1] = x as u8;
-                        state.bin_mut()[pc + 2] = (x >> 8) as u8;
+                    Directive::Word(e) => {
+                        if let Some(v) = e.numeric_value() {
+                            state.bin_mut()[pc] = v as u8;
+                            state.bin_mut()[pc + 1] = (v >> 8) as u8;
+                        } else {
+                            state.error(AssembleError::CannotEvaluateExpr(e.clone()));
+                        }
+                    }
+                    Directive::Dword(e) => {
+                        if let Some(v) = e.numeric_value() {
+                            state.bin_mut()[pc] = v as u8;
+                            state.bin_mut()[pc + 1] = ((v & 0xff00) >> 8) as u8;
+                            state.bin_mut()[pc + 2] = ((v & 0xff0000) >> 16) as u8;
+                            state.bin_mut()[pc + 3] = (v >> 24) as u8;
+                        } else {
+                            state.error(AssembleError::CannotEvaluateExpr(e.clone()));
+                        }
                     }
                     _ => {}
                 }
-            } else {
-                state.error(AssembleError::InvalidInstruction(op.clone()));
-            }
-        }))
+            }))
+            .with_visit_op(Box::new(|state, op| {
+                let (opcode, addrmode) = op.as_opaddr();
+                if let Some(oe) = OPCODE_TBL.get(&(opcode, addrmode)) {
+                    let pc = state.pc() as usize;
+                    state.bin_mut()[pc] = oe.byte;
+                    let x = op
+                        .operand()
+                        .as_ref()
+                        .map(|oper| oper.expr().numeric_value())
+                        .flatten()
+                        .unwrap_or(0);
+                    match oe.size {
+                        2 => {
+                            state.bin_mut()[pc + 1] = x as u8;
+                        }
+                        3 => {
+                            state.bin_mut()[pc + 1] = x as u8;
+                            state.bin_mut()[pc + 2] = (x >> 8) as u8;
+                        }
+                        _ => {}
+                    }
+                } else {
+                    state.error(AssembleError::InvalidInstruction(op.clone()));
+                }
+            }))
     }
 }

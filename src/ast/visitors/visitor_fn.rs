@@ -118,6 +118,15 @@ impl<R> VisitableFn<R> for Directive {
             Self::Const(_, expr) => {
                 r = expr.visit_fn(visitor, r);
             }
+            Self::Byte(expr) => {
+                r = expr.visit_fn(visitor, r);
+            }
+            Self::Word(expr) => {
+                r = expr.visit_fn(visitor, r);
+            }
+            Self::Dword(expr) => {
+                r = expr.visit_fn(visitor, r);
+            }
             _ => {}
         }
         r

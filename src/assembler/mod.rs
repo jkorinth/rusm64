@@ -117,6 +117,24 @@ mod tests {
 
     use super::{RusmAssembler, pass::Pass};
 
+    fn fmt_bin(data: &[u8]) -> String {
+        data.iter()
+            .chunks(16)
+            .into_iter()
+            .enumerate()
+            .map(|(idx, line)| {
+                format!(
+                    "{:#06x}: {}",
+                    idx * 16,
+                    line.map(|v| format!("{:02x}", v))
+                        .collect::<Vec<_>>()
+                        .join(" ")
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
+    }
+
     #[test]
     fn resolve_labels() {
         let num_labels = 10;
@@ -235,5 +253,91 @@ mod tests {
                 _
             ))
         ));
+    }
+
+    #[test]
+    fn emitter_directives() {
+        let src = r#"
+          start: .byte 1
+          word:  .word 2
+          dword: .dword 4
+        "#;
+        println!("src = {src}");
+
+        let ast = RusmParser::from_source(src).unwrap();
+        let state: State = State::from_ast(ast);
+        let mut asm = RusmAssembler::new(state).with_passes(vec![
+            Pass::resolve_labels_pass().boxed(),
+            Pass::generate_code_pass().boxed(),
+        ]);
+
+        let state = asm.execute().unwrap();
+        assert_eq!(state.errors(), &vec![]);
+        println!("symbols: {:?}", state.symbols());
+        assert_eq!(state.symbol("start"), Some(0));
+        assert_eq!(state.symbol("word"), Some(1));
+        assert_eq!(state.symbol("dword"), Some(3));
+        assert_eq!(state.bin().prg().len(), 7 + 2);
+    }
+
+    #[test]
+    fn segments() {
+        let src = r#"
+        .start: jmp .next
+                .org $100
+        .next:  .dword {{ 0 + start }}
+        .but:   jmp .then
+                .org $200
+        .then:  .word {{ then }}
+                jmp .start
+        "#;
+        println!("src = {src}");
+
+        let ast = RusmParser::from_source(src).unwrap();
+        let state: State = State::from_ast(ast);
+        let mut asm = RusmAssembler::new(state);
+
+        let state = asm.execute().unwrap();
+        assert_eq!(state.errors(), &vec![]);
+        println!("symbols: {:?}", state.symbols());
+
+        assert_eq!(state.symbol(".start"), Some(0));
+        assert_eq!(state.symbol(".next"), Some(0x100));
+        assert_eq!(state.symbol(".but"), Some(0x104));
+        assert_eq!(state.symbol(".then"), Some(0x200));
+
+        let mut prg = state.bin().prg();
+
+        println!("PRG:\n{}", fmt_bin(&prg.as_slice()[2..]));
+
+        assert_eq!(prg.len(), 2 + 0x205);
+
+        prg = prg.drain(2..).collect::<Vec<_>>();
+
+        assert_eq!(
+            prg[0x100], 0,
+            "start + 0 should be 0, expected 0x00 at 0x100, found {:#04x}",
+            prg[0x100]
+        );
+        assert_eq!(
+            prg[0x101], 0,
+            "start + 0 should be 0, expected 0x00 at 0x101, found {:#04x}",
+            prg[0x101]
+        );
+        assert_eq!(
+            prg[0x104], 0x4c,
+            "expected abs JMP (0x4c) at 0x104, found {:#04x}",
+            prg[0x104]
+        );
+        assert_eq!(
+            prg[0x200], 0,
+            "expected 0x200 in word at 0x200, found {:#04x} at 0x200",
+            prg[0x200]
+        );
+        assert_eq!(
+            prg[0x201], 2,
+            "expected 0x200 in word at 0x200, found {:#04x} at 0x201",
+            prg[0x201]
+        );
     }
 }

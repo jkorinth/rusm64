@@ -79,6 +79,15 @@ impl Visitable for Directive {
             Self::Const(_, expr) => {
                 expr.visit(visitor);
             }
+            Self::Byte(expr) => {
+                expr.visit(visitor);
+            }
+            Self::Word(expr) => {
+                expr.visit(visitor);
+            }
+            Self::Dword(expr) => {
+                expr.visit(visitor);
+            }
             _ => {}
         }
     }

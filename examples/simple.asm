@@ -24,10 +24,10 @@ exit:
     rts               ; Return from subroutine
 
 hello:
-    .byte "H"  ; Simple bytes instead of a string with null terminator
-    .byte "E"
-    .byte "L"
-    .byte "L"
-    .byte "O"
+    .byte 'H'  ; Simple bytes instead of a string with null terminator
+    .byte 'E'
+    .byte 'L'
+    .byte 'L'
+    .byte 'O'
     .byte 0
 

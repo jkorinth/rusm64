@@ -16,6 +16,12 @@ pub enum Directive {
     Const(String, Expr),
     #[display(".script {}", _0)]
     Script(Expr),
+    #[display(".byte {}", _0)]
+    Byte(Expr),
+    #[display(".word {}", _0)]
+    Word(Expr),
+    #[display(".dword {}", _0)]
+    Dword(Expr),
     #[display(".{} {}", _0, _1.as_deref().unwrap_or(""))]
     Unknown(String, Option<String>),
 }
@@ -45,7 +51,34 @@ impl Directive {
                 let expr = parse(Rule::expr, RusmParser::parse_expr, &ve)?;
                 Ok(Directive::Const(v, expr))
             }
+            "byte" => {
+                let v = value.expect(".byte directive requires an argument");
+                let expr = parse(Rule::expr, RusmParser::parse_expr, &v)?;
+                Ok(Directive::Byte(expr))
+            }
+            "word" => {
+                let v = value.expect(".word directive requires an argument");
+                let expr = parse(Rule::expr, RusmParser::parse_expr, &v)?;
+                Ok(Directive::Word(expr))
+            }
+            "dword" => {
+                let v = value.expect(".dword directive requires an argument");
+                let expr = parse(Rule::expr, RusmParser::parse_expr, &v)?;
+                Ok(Directive::Dword(expr))
+            }
             name => Ok(Directive::Unknown(name.into(), value)),
+        }
+    }
+
+    pub fn expr(&self) -> Option<&Expr> {
+        match self {
+            Directive::Org(e) => Some(e),
+            Directive::Const(_, e) => Some(e),
+            Directive::Script(e) => Some(e),
+            Directive::Byte(e) => Some(e),
+            Directive::Word(e) => Some(e),
+            Directive::Dword(e) => Some(e),
+            _ => None,
         }
     }
 }

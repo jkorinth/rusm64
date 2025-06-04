@@ -89,6 +89,15 @@ impl<Context> VisitableMut<Context> for Directive {
             Self::Const(_, expr) => {
                 expr.visit_mut(visitor, ctx);
             }
+            Self::Byte(expr) => {
+                expr.visit_mut(visitor, ctx);
+            }
+            Self::Word(expr) => {
+                expr.visit_mut(visitor, ctx);
+            }
+            Self::Dword(expr) => {
+                expr.visit_mut(visitor, ctx);
+            }
             _ => {}
         }
     }
