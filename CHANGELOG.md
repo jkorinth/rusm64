@@ -1,3 +1,13 @@
+## 0.4.0 (2025-06-04)
+
+### Feat
+
+- Implement emitter directives: .byte, .word, .dword
+
+### Fix
+
+- Change label syntax: allow only one leading dot
+
 ## 0.3.0 (2025-06-03)
 
 ### Feat
