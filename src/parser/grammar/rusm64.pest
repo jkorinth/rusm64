@@ -11,7 +11,7 @@ bin_literal = @{ "%" ~ ASCII_BIN_DIGIT+ }
 dec_literal = { ASCII_DIGIT+ }
 
 label_name = { pc | label_str }
-label_str = @{ ("." | "_")* ~ ASCII_ALPHA_LOWER ~ ("_" | ASCII_ALPHANUMERIC)* }
+label_str = @{ "."? ~ "_"* ~ ASCII_ALPHA_LOWER ~ ("_" | ASCII_ALPHANUMERIC)* }
 pc = @{ "*" }
 dir_name = @{ "_"* ~ ASCII_ALPHA_LOWER ~ ("_" | ASCII_ALPHANUMERIC)* }
 dir_arg = @{ (!NEWLINE ~ !";" ~ ANY)* }

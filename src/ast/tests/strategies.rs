@@ -6,7 +6,7 @@ use proptest::{prelude::*, sample::select};
 
 // Strategy for generating valid labels
 pub fn label_name_strategy() -> impl Strategy<Value = String> {
-    "[_.]*[a-z][a-zA-Z0-9_]*"
+    r"\.?[_]*[a-z][a-zA-Z0-9_]*"
         .prop_map(|s| s.to_string())
         .prop_filter("non-empty label_name", |s| !s.is_empty())
 }

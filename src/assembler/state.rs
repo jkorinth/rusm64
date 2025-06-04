@@ -197,7 +197,10 @@ impl From<State> for rhai::Scope<'_> {
         let mut scope = rhai::Scope::new();
         let symbols = value.symbols().clone();
         for (name, val) in symbols {
-            scope.push_constant(name, val);
+            scope.push_constant(&name, val);
+            if let Some(n) = name.strip_prefix(".") {
+                scope.push_constant(n, val);
+            }
         }
         scope
     }
