@@ -2,9 +2,8 @@ name: Build multi-platform
 
 on:
   push:
-    branches: [ "main", "dev" ]
-  pull_request:
-    branches: [ "main", "dev" ]
+    tags:
+      - "[0-9]+\\.[0-9]+\\.[0-9]+"
 
 env:
   CARGO_TERM_COLOR: always
@@ -13,6 +12,9 @@ jobs:
   build:
     name: Build
     runs-on: ${{ matrix.os }}
+
+    permissions:
+      contents: write
 
     strategy:
       matrix:
@@ -34,8 +36,12 @@ jobs:
             target: aarch64-apple-darwin
 
           - build: windows-gnu
-            os: windows-latest
+            os: ubuntu-latest
             target: x86_64-pc-windows-gnu
+
+          - build: windows-msvc
+            os: windows-latest
+            target: x86_64-pc-windows-msvc
 
     steps:
       - name: Checkout
@@ -43,7 +49,17 @@ jobs:
 
       - name: Get tag
         shell: bash
-        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+        run: |
+          case "$GITHUB_REF_TYPE" in
+            branch)
+              echo "VERSION=$(echo "$GITHUB_REF" | tr '/' '-')" >> $GITHUB_ENV
+              ;;
+            tag)
+              echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+              ;;
+            *)
+              echo "VERSION=unknown" >> $GITHUB_ENV
+          esac
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -56,3 +72,28 @@ jobs:
           use-cross: true
           command: build
           args: --verbose --release --target ${{ matrix.target }}
+
+      - name: Build Archive
+        shell: bash
+        run: |
+          env | sort
+          BIN="rusm64"
+          DIR="$BIN-${{ env.VERSION }}-${{ matrix.target }}"
+          mkdir "$DIR"
+
+          find "target/${{ matrix.target }}/release" -type f -perm -u+x -exec cp \{\} "$DIR" \;
+
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            7z a "$DIR.zip" "$DIR"
+            echo "ASSET=$DIR.zip" >> $GITHUB_ENV
+          else
+            tar -czf "$DIR.tar.gz" "$DIR"
+            echo "ASSET=$DIR.tar.gz" >> $GITHUB_ENV
+          fi
+
+      - name: Upload binaries
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            ${{ env.ASSET }}
+

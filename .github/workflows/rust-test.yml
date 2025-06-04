@@ -2,9 +2,9 @@ name: Rust Unit Tests
 
 on:
   push:
-    branches: [ "main", "dev" ]
+    branches: [ "main", "dev", "next" ]
   pull_request:
-    branches: [ "main", "dev" ]
+    branches: [ "main", "dev", "next" ]
 
 env:
   CARGO_TERM_COLOR: always
