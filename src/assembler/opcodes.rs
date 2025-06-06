@@ -4,8 +4,6 @@
 use crate::ast::{AddressingMode, Opcode};
 use std::{collections::HashMap, sync::LazyLock};
 
-use super::AssembleError;
-
 /// Represents an opcode lookup entry
 #[derive(Debug, Clone, Copy)]
 pub struct OpcodeEntry {
@@ -16,6 +14,7 @@ pub struct OpcodeEntry {
     pub size: u8,
 
     /// Number of cycles required to execute this instruction
+    #[allow(unused)]
     pub cycles: u8,
 }
 
@@ -735,13 +734,6 @@ pub fn build_opcode_table() -> HashMap<(Opcode, AddressingMode), OpcodeEntry> {
 
 pub static OPCODE_TBL: LazyLock<HashMap<(Opcode, AddressingMode), OpcodeEntry>> =
     LazyLock::new(build_opcode_table);
-
-pub fn get_opcode_byte(opcode: Opcode, addrmode: AddressingMode) -> Result<u8, AssembleError> {
-    OPCODE_TBL
-        .get(&(opcode, addrmode))
-        .map(|x| x.byte)
-        .ok_or(AssembleError::InvalidAddressingMode(opcode, addrmode))
-}
 
 fn build_valid_addressing_mode_table() -> HashMap<Opcode, Vec<AddressingMode>> {
     use crate::assembler::opcodes::OPCODE_TBL;

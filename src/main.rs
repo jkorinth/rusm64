@@ -65,31 +65,36 @@ fn main() {
                 }
             }
         }
-        Commands::Parse { input } => match parse_file(&input) {
-            Ok(_) => {
-                println!("Successfully parsed {}", input.display());
+        Commands::Parse { input } => {
+            pest::set_error_detail(true);
+            match parse_file(&input) {
+                Ok(_) => {
+                    println!("Successfully parsed {}", input.display());
+                }
+                Err(e) => {
+                    eprintln!("Error parsing file: {:#?}", e);
+                    process::exit(1);
+                }
             }
-            Err(e) => {
-                eprintln!("Error parsing file: {}", e);
-                process::exit(1);
-            }
-        },
+        }
     }
 }
 
-fn assemble_file(input_path: &PathBuf, output_path: &PathBuf, verbose: bool) -> Result<()> {
+fn assemble_file(input_path: &PathBuf, output_path: &PathBuf, _verbose: bool) -> Result<()> {
     let ast = parse_file(input_path).unwrap();
     let state: AssemblerState = AssemblerState::from_ast(ast);
     let mut asm = RusmAssembler::new(state);
     let res = asm.execute().unwrap();
     println!("Result state:\n{:#}", res);
     println!("Result AST:\n{:#}", res.ast());
+    let bin = res.bin().prg();
+    print_binary_dump(&bin, 16);
     let mut file = std::fs::OpenOptions::new()
         .write(true)
         .create(true)
         .open(output_path)
         .unwrap();
-    file.write_all(&res.bin().prg()).unwrap();
+    file.write_all(&bin).unwrap();
     Ok(())
 }
 

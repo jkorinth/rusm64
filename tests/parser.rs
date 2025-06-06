@@ -32,7 +32,7 @@ fn parse_comments() {
     "#;
     let ast = parse_str(&source.to_string());
     println!("Parsed AST: {:#?}", ast);
-    let ast = ast.expect("Failed to parse comments");
+    let _ = ast.expect("Failed to parse comments");
 }
 
 #[test]
@@ -62,7 +62,7 @@ fn parse_problematic_directives() {
     for l in src {
         let r = RusmParser::parse(Rule::directive, l);
         println!("rule directive: {:?}", r);
-        let ast = RusmParser::parse_directive(
+        let _ = RusmParser::parse_directive(
             r.expect("failed to parse directive")
                 .next()
                 .unwrap()
@@ -79,8 +79,8 @@ fn parse_labels() {
     start:
     end: ; another label
     
-fucker:
-fucker2:
+label1:
+label2:
     "#;
     let ast = parse_str(&source.to_string());
     println!("Parsed AST: {:#?}", ast);

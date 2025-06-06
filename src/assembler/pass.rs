@@ -427,7 +427,7 @@ impl Pass {
                     let is_zero_page = val >= u8::MIN.into() && val <= u8::MAX.into();
                     let supports = |addrmode| {
                         VALID_ADDRESSING_MODES
-                            .get(&opcode)
+                            .get(opcode)
                             .unwrap_or(&vec![])
                             .contains(&addrmode)
                     };

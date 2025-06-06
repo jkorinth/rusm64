@@ -16,8 +16,8 @@ impl Display for Ast {
             .iter()
             .map(|l| format!("{}", l))
             .collect::<Vec<_>>()
-            .join("\n");
-        f.write_str(&format!("{}", lines))
+            .join("");
+        f.write_str(&lines)
     }
 }
 
