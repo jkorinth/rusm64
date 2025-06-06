@@ -1,3 +1,13 @@
+## 0.5.0 (2025-06-06)
+
+### Feat
+
+- Implement .include directive
+
+### Fix
+
+- Fix problems in script parsing
+
 ## 0.4.0 (2025-06-04)
 
 ### Feat
