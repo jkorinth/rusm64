@@ -42,6 +42,15 @@ impl Ast {
     pub fn line_mut(&mut self, line_number: usize) -> Option<&mut Line> {
         self.lines.get_mut(line_number)
     }
+    pub fn replace<'a, I: Iterator<Item = &'a Line>>(&mut self, idx: usize, lines: I) -> &mut Self {
+        println!("AST: {self:#?}\nreplacing {idx}...");
+        if idx + 1 < self.lines.len() {
+            self.lines.splice(idx..idx + 1, lines.cloned());
+        } else {
+            self.lines.splice(idx.., lines.cloned());
+        }
+        self
+    }
 }
 
 impl EqModAddressing for Ast {

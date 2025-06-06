@@ -277,6 +277,9 @@ impl RusmParser {
                 Rule::script_directive => {
                     return Self::parse_script_directive(t.into_inner());
                 }
+                Rule::include_directive => {
+                    return Self::parse_include_directive(t.into_inner());
+                }
                 Rule::generic_directive => {
                     return Self::parse_generic_directive(t.into_inner());
                 }
@@ -341,6 +344,7 @@ impl RusmParser {
             "unexpected end of emit directive".to_string(),
         ))
     }
+
     pub fn parse_script_directive(pairs: Pairs<'_, Rule>) -> Result<Directive, ParseError> {
         let mut builder = ScriptDirectiveBuilder::default();
 
@@ -355,6 +359,29 @@ impl RusmParser {
         }
 
         builder.build()
+    }
+
+    pub fn parse_include_directive(mut pairs: Pairs<'_, Rule>) -> Result<Directive, ParseError> {
+        if let Some(t) = pairs.next() {
+            match t.as_rule() {
+                Rule::str_literal => {
+                    return Ok(Directive::Include(
+                        t.as_str()
+                            .strip_prefix("\"")
+                            .unwrap_or(t.as_str())
+                            .strip_suffix("\"")
+                            .unwrap_or(t.as_str())
+                            .to_string(),
+                    ));
+                }
+                _ => {
+                    return unexpected_rule!(t.as_rule() => "expr");
+                }
+            }
+        }
+        Err(ParseError::InvalidSyntax(
+            "unexpected end of include directive".into(),
+        ))
     }
 
     pub fn parse_generic_directive(pairs: Pairs<'_, Rule>) -> Result<Directive, ParseError> {
@@ -573,6 +600,30 @@ mod tests {
             println!("<rule_rhai> op expr: {}", t);
             println!("<rule_rhai> AST: {}", &ast);
             println!("<rule_rhai> {:?}", RusmParser::parse_expr(ast).unwrap());
+        }
+    }
+
+    #[test]
+    fn rule_str_literal() {
+        pest::set_error_detail(true);
+        let tests = ["\" hullo   \"", "\"inc/d/a/test.asm\""];
+        for t in tests {
+            let pairs = RusmParser::parse(Rule::str_literal, t).unwrap();
+            println!("<rule_str> op expr: {}", t);
+            println!("<rule_str> AST: {}", &pairs);
+            println!("<rule_str> {:?}", pairs);
+        }
+    }
+
+    #[test]
+    fn rule_include_directive() {
+        pest::set_error_detail(true);
+        let tests = [".include \"/a/b/c/d\"", ".include   \"test.asm\""];
+        for t in tests {
+            let ast = RusmParser::parse(Rule::directive, t).unwrap();
+            println!("<rule_include> op expr: {}", t);
+            println!("<rule_include> AST: {}", &ast);
+            println!("<rule_include> {:?}", ast);
         }
     }
 }

@@ -12,6 +12,7 @@ keywords = [ "assembler", "6502", "6510", "C64", "Commodore" ]
 itertools = "0.14.0"
 proptest = "1.4"
 regex = "1.11.1"
+tempfile = "3.20.0"
 
 [dependencies]
 pest = { version = "2.7" }

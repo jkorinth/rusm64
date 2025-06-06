@@ -1,7 +1,7 @@
 use super::{
     AssembleError,
     opcodes::{OPCODE_TBL, VALID_ADDRESSING_MODES},
-    state::State,
+    state::{AstOperations, State},
 };
 use crate::ast::{
     visitors::{VisitableMut, VisitorMut},
@@ -50,6 +50,7 @@ impl Pass {
         let mut ast = std::mem::take(state.ast_mut());
         ast.visit_mut(self, &mut state);
         *state.ast_mut() = ast;
+        state = state.process_ast_ops();
         state
     }
 
@@ -344,6 +345,31 @@ fn make_hex_literal(val: i64) -> Expr {
 
 // Factory methods
 impl Pass {
+    pub fn include_pass() -> Self {
+        Pass::default().with_visit_line(Box::new(|state, line| match line {
+            Line(_, Some(Instruction::Directive(Directive::Include(path))), _) => {
+                let src = std::fs::read_to_string(&path);
+                match src {
+                    Ok(src) => match crate::RusmParser::from_source(&src) {
+                        Ok(ast) => {
+                            let line_num = *state.loc().line();
+                            println!("going to replace line #{line_num}");
+                            state.ast_op(AstOperations::Replace(*state.loc().line(), ast));
+                            *line = Line::default();
+                        }
+                        Err(e) => {
+                            state.error(e.into());
+                        }
+                    },
+                    _ => {
+                        state.error(AssembleError::IncludedFileDoesNotExist(path.clone()));
+                    }
+                }
+            }
+            _ => {}
+        }))
+    }
+
     pub fn validate_labels_pass() -> Self {
         Pass::default().with_visit_label(Box::new(|state, label| {
             let pc = state.pc();

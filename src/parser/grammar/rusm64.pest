@@ -6,6 +6,7 @@ ws = _{ WHITESPACE* }
 nl = _{ "\n" | "\r\n" | "\r" }
 
 chr_literal = @{ "'" ~ (!"'" ~ ANY) ~ "'" }
+str_literal = @{ "\"" ~ (!"\"" ~ ANY)* ~ "\"" }
 hex_literal = @{ "$" ~ ASCII_HEX_DIGIT+ }
 bin_literal = @{ "%" ~ ASCII_BIN_DIGIT+ }
 dec_literal = { ASCII_DIGIT+ }
@@ -65,6 +66,7 @@ directive = { "." ~ (
 | byte_directive
 | word_directive
 | dword_directive
+| include_directive
 | generic_directive
 )}
 
@@ -74,6 +76,7 @@ script_directive  = { "script" ~ expr }
 byte_directive    = { "byte" ~ expr ~ ("," ~ expr)* }
 word_directive    = { "word" ~ expr ~ ("," ~ expr)* }
 dword_directive   = { "dword" ~ expr ~ ("," ~ expr)* }
+include_directive = { "include" ~ str_literal }
 generic_directive = { dir_name ~ dir_arg }
 
 // Not COMMENT - need to control where comments may occur.

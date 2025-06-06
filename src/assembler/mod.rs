@@ -24,6 +24,23 @@ pub struct SourceLocation {
     pc: Option<Addr>,
 }
 
+impl SourceLocation {
+    #[inline]
+    pub fn file(&self) -> &String {
+        &self.file
+    }
+
+    #[inline]
+    pub fn line(&self) -> &LineNum {
+        &self.line
+    }
+
+    #[inline]
+    pub fn pc(&self) -> &Option<Addr> {
+        &self.pc
+    }
+}
+
 pub struct RusmAssembler {
     passes: Vec<Pass>,
     state: AssemblerState,
@@ -99,6 +116,7 @@ impl Default for RusmAssembler {
     fn default() -> Self {
         Self {
             passes: vec![
+                Pass::include_pass(),
                 Pass::resolve_labels_pass(),
                 Pass::resolve_constants_pass(),
                 Pass::resolve_references_pass(),
@@ -338,6 +356,53 @@ mod tests {
             prg[0x201], 2,
             "expected 0x200 in word at 0x200, found {:#04x} at 0x201",
             prg[0x201]
+        );
+    }
+
+    #[test]
+    fn includes() {
+        use std::io::Write;
+        let src_a = r#"
+          a: lda #1 ;
+             sta 2 ;
+             jsr $1234
+             rts
+        "#;
+        let mut a = tempfile::NamedTempFile::new().unwrap();
+        write!(a, "{}", src_a).unwrap();
+        let src_b = r#"
+          b: lda #2;
+             sta 7;
+             rts
+        "#;
+        let mut b = tempfile::NamedTempFile::new().unwrap();
+        write!(b, "{}", src_b).unwrap();
+        let src_c = [
+            ".org $1000".to_string(),
+            format!(".include \"{}\"", a.path().to_str().unwrap()),
+            format!(".include \"{}\"\n", b.path().to_str().unwrap()),
+        ]
+        .join("\n");
+        println!("src_c:\n{}", src_c);
+
+        let ast = RusmParser::from_source(&src_c).unwrap();
+        let state = State::from_ast(ast);
+        let mut asm = RusmAssembler::new(state);
+        let state = asm.execute().unwrap();
+
+        assert_eq!(
+            state.symbol("a"),
+            Some(0x1000),
+            "expected \"a\" at {:#06x}, found it at {:#06x}",
+            0x1000,
+            state.symbol("a").unwrap_or(0xffff)
+        );
+        assert_eq!(
+            state.symbol("b"),
+            Some(0x1008),
+            "expected \"b\" at {:#06x}, found it at {:#06x}",
+            0x1008,
+            state.symbol("b").unwrap_or(0xffff)
         );
     }
 }

@@ -17,6 +17,13 @@ pub struct State {
     ast: Ast,
     symbols: HashMap<String, i64>,
     errors: Vec<(SourceLocation, AssembleError)>,
+    ast_ops: Vec<AstOperations>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum AstOperations {
+    /// Replace line with given index by AST.
+    Replace(usize, Ast),
 }
 
 impl State {
@@ -175,6 +182,30 @@ impl State {
 
     pub fn with_file(mut self, file: &str) -> Self {
         self.file = file.into();
+        self
+    }
+
+    pub fn ast_op(&mut self, op: AstOperations) -> &mut Self {
+        self.ast_ops.push(op);
+        self
+    }
+
+    pub fn process_ast_ops(mut self) -> Self {
+        let ops = std::mem::take(&mut self.ast_ops);
+        let mut shift = 0; // need to account for previous ops
+        for op in ops {
+            match op {
+                AstOperations::Replace(idx, ast) => {
+                    println!(
+                        "replacing line #{idx} with {} lines...",
+                        ast.lines().count()
+                    );
+                    self.ast_mut().replace(idx + shift, ast.lines());
+                    shift += ast.lines().count() - 1;
+                }
+            }
+        }
+        println!("AST after replacements:\n{}", self.ast());
         self
     }
 }

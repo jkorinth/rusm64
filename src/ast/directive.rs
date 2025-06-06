@@ -1,12 +1,8 @@
 use super::EqModAddressing;
 use derive_more::Display;
-use pest::{Parser, iterators::Pairs};
 use rusm64_macros::EqModAddressing;
 
-use crate::{
-    Expr,
-    parser::grammar::{ParseError, Rule, RusmParser},
-};
+use crate::{Expr, parser::grammar::ParseError};
 
 #[derive(Clone, Debug, Display, Eq, EqModAddressing, Hash, PartialEq)]
 pub enum Directive {
@@ -22,52 +18,15 @@ pub enum Directive {
     Word(Expr),
     #[display(".dword {}", _0)]
     Dword(Expr),
+    #[display(".include \"{}\"", _0)]
+    Include(String),
     #[display(".{} {}", _0, _1.as_deref().unwrap_or(""))]
     Unknown(String, Option<String>),
 }
 
-fn parse<T, F>(rule: Rule, via: F, input: &str) -> Result<T, ParseError>
-where
-    F: Fn(Pairs<'_, Rule>) -> Result<T, ParseError>,
-{
-    via(RusmParser::parse(rule, input)?)
-}
-
 impl Directive {
     pub fn from(name: String, value: Option<String>) -> Result<Directive, ParseError> {
-        match name.to_lowercase().as_str() {
-            "org" => {
-                let v = value.expect(".org directive requires an address argument");
-                let expr = parse(Rule::expr, RusmParser::parse_expr, &v)?;
-                Ok(Directive::Org(expr))
-            }
-            "const" => {
-                let mut v = value.expect(".org directive requires an address argument");
-                let mut name = RusmParser::parse(Rule::identifier, &v)?;
-                let x = name.nth(0).expect("could not parse name");
-                let mut ve = v.split_off(x.as_str().len());
-                ve = ve.trim().into();
-                println!("ve = {}", ve);
-                let expr = parse(Rule::expr, RusmParser::parse_expr, &ve)?;
-                Ok(Directive::Const(v, expr))
-            }
-            "byte" => {
-                let v = value.expect(".byte directive requires an argument");
-                let expr = parse(Rule::expr, RusmParser::parse_expr, &v)?;
-                Ok(Directive::Byte(expr))
-            }
-            "word" => {
-                let v = value.expect(".word directive requires an argument");
-                let expr = parse(Rule::expr, RusmParser::parse_expr, &v)?;
-                Ok(Directive::Word(expr))
-            }
-            "dword" => {
-                let v = value.expect(".dword directive requires an argument");
-                let expr = parse(Rule::expr, RusmParser::parse_expr, &v)?;
-                Ok(Directive::Dword(expr))
-            }
-            name => Ok(Directive::Unknown(name.into(), value)),
-        }
+        Ok(Directive::Unknown(name, value))
     }
 
     pub fn expr(&self) -> Option<&Expr> {

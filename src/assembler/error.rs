@@ -1,4 +1,7 @@
-use crate::ast::{AddressingMode, Expr, Op, Opcode};
+use crate::{
+    ast::{AddressingMode, Expr, Op, Opcode},
+    grammar::ParseError,
+};
 use std::num::ParseIntError;
 
 use super::SourceLocation;
@@ -35,6 +38,12 @@ pub enum AssembleError {
     #[error("rhai script error: {0}")]
     RhaiError(String),
 
+    #[error("included file does not exist or cannot be opened: {0}")]
+    IncludedFileDoesNotExist(String),
+
+    #[error("cannot parse included file: {0}")]
+    IncludedFileSyntaxError(ParseError),
+
     #[error("multiple errors:\n{0}")]
     MultipleErrors(#[from] AssembleErrorList),
 }
@@ -63,5 +72,11 @@ impl std::fmt::Display for AssembleErrorList {
 impl From<ParseIntError> for AssembleError {
     fn from(value: ParseIntError) -> Self {
         Self::InvalidLiteral(value)
+    }
+}
+
+impl From<ParseError> for AssembleError {
+    fn from(value: ParseError) -> Self {
+        Self::IncludedFileSyntaxError(value)
     }
 }
