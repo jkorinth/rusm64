@@ -191,7 +191,7 @@ impl UpperExpr {
 }
 
 #[derive(Clone, Debug, Display, Eq, EqModAddressing, Hash, PartialEq, From)]
-#[display("{{{{{}}}}}", _0)]
+#[display("!!{}!!", _0)]
 pub struct RhaiExpr(String);
 
 impl RhaiExpr {

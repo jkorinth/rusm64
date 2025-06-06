@@ -25,7 +25,7 @@ pub struct SourceLocation {
 }
 
 pub struct RusmAssembler {
-    passes: Vec<Box<Pass>>,
+    passes: Vec<Pass>,
     state: AssemblerState,
 }
 
@@ -37,7 +37,7 @@ impl RusmAssembler {
         }
     }
 
-    pub fn with_passes(mut self, passes: Vec<Box<Pass>>) -> Self {
+    pub fn with_passes(mut self, passes: Vec<Pass>) -> Self {
         self.passes = passes;
         self
     }
@@ -70,8 +70,9 @@ impl RusmAssembler {
                 self.state = pass.execute(std::mem::take(&mut self.state));
             }
             cont = if let Some(state) = &last_state {
-                /* *state.ast() != *self.state.ast() ||*/
-                *state.errors() != *self.state.errors() || *state.symbols() != *self.state.symbols()
+                *state.ast() != *self.state.ast()
+                    || *state.errors() != *self.state.errors()
+                    || *state.symbols() != *self.state.symbols()
             } else {
                 false
             };
@@ -98,12 +99,12 @@ impl Default for RusmAssembler {
     fn default() -> Self {
         Self {
             passes: vec![
-                Box::new(Pass::resolve_labels_pass()),
-                Box::new(Pass::resolve_constants_pass()),
-                Box::new(Pass::resolve_references_pass()),
-                Box::new(Pass::resolve_rhai_pass()),
-                Box::new(Pass::determine_addressing_pass()),
-                Box::new(Pass::generate_code_pass()),
+                Pass::resolve_labels_pass(),
+                Pass::resolve_constants_pass(),
+                Pass::resolve_references_pass(),
+                Pass::resolve_rhai_pass(),
+                Pass::determine_addressing_pass(),
+                Pass::generate_code_pass(),
             ],
             state: AssemblerState::default(),
         }
@@ -183,8 +184,7 @@ mod tests {
         "#;
         let ast = RusmParser::from_source(src).unwrap();
         let state: State = State::from_ast(ast).with_file("<local>");
-        let mut asm =
-            RusmAssembler::new(state).with_passes(vec![Pass::validate_labels_pass().boxed()]);
+        let mut asm = RusmAssembler::new(state).with_passes(vec![Pass::validate_labels_pass()]);
         let res = asm.execute();
         assert!(res.is_err());
     }
@@ -196,20 +196,20 @@ mod tests {
         test:
             .const Y <X
             .const Z >X
-            .const X {{ 0x1000 + E }}
-            .const D {{ A + B + C }}
-            .const C {{ B + 23 }}
-            .const B {{ A + 12 }}
+            .const X !! 0x1000 + E !!
+            .const D !! A + B + C !!
+            .const C !! B + 23 !!
+            .const B !! A + 12 !!
             .const A 12
-            .const E {{ D + test }}
+            .const E !! D + test !!
         "#;
         println!("src = {src}");
 
         let ast = RusmParser::from_source(src).unwrap();
         let state: State = State::from_ast(ast);
         let mut asm = RusmAssembler::new(state).with_passes(vec![
-            Pass::resolve_labels_pass().boxed(),
-            Pass::resolve_constants_pass().boxed(),
+            Pass::resolve_labels_pass(),
+            Pass::resolve_constants_pass(),
         ]);
 
         let state = asm.execute().unwrap();
@@ -236,7 +236,7 @@ mod tests {
         let ast = RusmParser::from_source(src).unwrap();
         let state: State = State::from_ast(ast);
         let mut asm =
-            RusmAssembler::new(state).with_passes(vec![Pass::determine_addressing_pass().boxed()]);
+            RusmAssembler::new(state).with_passes(vec![Pass::determine_addressing_pass()]);
 
         let state = asm.execute().unwrap();
         assert_eq!(state.errors(), &vec![]);
@@ -267,8 +267,8 @@ mod tests {
         let ast = RusmParser::from_source(src).unwrap();
         let state: State = State::from_ast(ast);
         let mut asm = RusmAssembler::new(state).with_passes(vec![
-            Pass::resolve_labels_pass().boxed(),
-            Pass::generate_code_pass().boxed(),
+            Pass::resolve_labels_pass(),
+            Pass::generate_code_pass(),
         ]);
 
         let state = asm.execute().unwrap();
@@ -285,10 +285,10 @@ mod tests {
         let src = r#"
         .start: jmp .next
                 .org $100
-        .next:  .dword {{ 0 + start }}
+        .next:  .dword !! 0 + start !!
         .but:   jmp .then
                 .org $200
-        .then:  .word {{ then }}
+        .then:  .word !! then !!
                 jmp .start
         "#;
         println!("src = {src}");

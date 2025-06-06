@@ -62,12 +62,18 @@ directive = { "." ~ (
   const_directive
 | org_directive
 | script_directive
+| byte_directive
+| word_directive
+| dword_directive
 | generic_directive
 )}
 
-const_directive = { "const" ~ ws ~ identifier ~ ws ~ expr }
-org_directive = { "org" ~ expr }
-script_directive = { "script" ~ rhai_expr }
+const_directive   = { "const" ~ ws ~ identifier ~ ws ~ expr }
+org_directive     = { "org" ~ expr }
+script_directive  = { "script" ~ expr }
+byte_directive    = { "byte" ~ expr ~ ("," ~ expr)* }
+word_directive    = { "word" ~ expr ~ ("," ~ expr)* }
+dword_directive   = { "dword" ~ expr ~ ("," ~ expr)* }
 generic_directive = { dir_name ~ dir_arg }
 
 // Not COMMENT - need to control where comments may occur.
@@ -82,8 +88,8 @@ expr = {
 | ref_expr
 }
 
-rhai_expr = ${ "{{" ~ rhai_content ~ "}}" }
-rhai_content = @{ (!"{{" ~ !"}}" ~ ANY)* }
+rhai_expr = ${ "!!" ~ rhai_content ~ "!!" }
+rhai_content = @{ (!"!!" ~ ANY)* }
 
 literal_expr = {
   number_literal

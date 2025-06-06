@@ -23,7 +23,7 @@ static REF_LABEL: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"[a-z_]([a-zA-Z
 static REF_SYMBOL: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"[A-Z_]([a-zA-Z0-9_])*").unwrap());
 
-static RHAI: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\{\{(?s).*\}\}").unwrap());
+static RHAI: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\!\!(?s).*\!\!").unwrap());
 
 static LABEL: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"[a-z_][a-zA-Z0-9_]*:\s*").unwrap());
 
@@ -131,6 +131,7 @@ proptest! {
 
     #[test]
     fn fmt_full(ast in ast_strategy()) {
+        let mut errors: usize = 0;
         let src = format!("{}", ast);
         println!("{}\nAST:\n{:?}\n.asm:\n{}\n{}", "*".repeat(80), ast, src, "^".repeat(80));
         match RusmParser::from_source(&src) {
@@ -143,13 +144,23 @@ proptest! {
                     println!("programs parsed to different ASTs, saved them in {}.orig.asm and {}.parsed.asm",
                         prefix, prefix);
                 }
+                ast.lines().cloned().zip(re_ast.lines().cloned())
+                    .filter(|(l1, l2)| !l1.eq_mod_addressing(l2))
+                    .for_each(|(l1, l2)| {
+                        println!("original line:\n{:#?}", l1);
+                        println!(" !=");
+                        println!("re line:\n{:#?}", l2);
+                });
+
                 assert!(ast.eq_mod_addressing(&re_ast));
             }
             Err(e) => {
                 let prefix = format!("ex_{:04}", COUNTER_EXAMPLE_N.fetch_add(1, Ordering::SeqCst));
                 let _ = std::fs::write(format!("{}.unparseable.asm", prefix), src);
                 println!("parsing generated asm failed: {}\nWrote {}.unparseable.asm.", e, prefix);
+                errors += 1;
             }
         }
+        assert_eq!(errors, 0, "found unparseable code, check outputs");
     }
 }

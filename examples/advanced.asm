@@ -42,14 +42,14 @@ clear_screen:
     lda #' '          ; Space character
 clear_loop:
     sta SCREEN_BASE,x
-    sta {{SCREEN_BASE+$100}},x
-    sta {{SCREEN_BASE+$200}},x
-    sta {{SCREEN_BASE+$300}},x
+    sta !!SCREEN_BASE+$100!!,x
+    sta !!SCREEN_BASE+$200!!,x
+    sta !!SCREEN_BASE+$300!!,x
     lda #CHAR_COLOR   ; Set color
     sta COLOR_BASE,x
-    sta {{COLOR_BASE+$100}},x
-    sta {{COLOR_BASE+$200}},x
-    sta {{COLOR_BASE+$300}},x
+    sta !!COLOR_BASE+$100!!,x
+    sta !!COLOR_BASE+$200!!,x
+    sta !!COLOR_BASE+$300!!,x
     lda #' '          ; Restore space character
     inx
     bne clear_loop
@@ -62,7 +62,7 @@ print_char:
     lda screen_lo,y   ; Get low byte of screen row address
     sta SCREEN_PTR
     lda screen_hi,y   ; Get high byte of screen row address
-    sta {{SCREEN_PTR+1}}
+    sta !!SCREEN_PTR+1!!
     
     ldy CURSOR_X
     pla               ; Restore A
@@ -73,7 +73,7 @@ print_char:
     lda color_lo,y    ; Get low byte of color row address
     sta COLOR_PTR
     lda color_hi,y    ; Get high byte of color row address
-    sta {{COLOR_PTR+1}}
+    sta !!COLOR_PTR+1!!
     
     lda #CHAR_COLOR
     sta (COLOR_PTR),y ; Write color to color memory
@@ -98,48 +98,48 @@ print_done:
 
 ; Lookup tables for screen and color row addresses
 screen_lo:
-    .byte <SCREEN_BASE, <{{SCREEN_BASE+40}}, <{{SCREEN_BASE+80}}
-    .byte <{{SCREEN_BASE+120}}, <{{SCREEN_BASE+160}}, <{{SCREEN_BASE+200}}
-    .byte <{{SCREEN_BASE+240}}, <{{SCREEN_BASE+280}}, <{{SCREEN_BASE+320}}
-    .byte <{{SCREEN_BASE+360}}, <{{SCREEN_BASE+400}}, <{{SCREEN_BASE+440}}
-    .byte <{{SCREEN_BASE+480}}, <{{SCREEN_BASE+520}}, <{{SCREEN_BASE+560}}
-    .byte <{{SCREEN_BASE+600}}, <{{SCREEN_BASE+640}}, <{{SCREEN_BASE+680}}
-    .byte <{{SCREEN_BASE+720}}, <{{SCREEN_BASE+760}}, <{{SCREEN_BASE+800}}
-    .byte <{{SCREEN_BASE+840}}, <{{SCREEN_BASE+880}}, <{{SCREEN_BASE+920}}
-    .byte <{{SCREEN_BASE+960}}
+    .byte <SCREEN_BASE, <!!SCREEN_BASE+40!!, <!!SCREEN_BASE+80!!
+    .byte <!!SCREEN_BASE+120!!, <!!SCREEN_BASE+160!!, <!!SCREEN_BASE+200!!
+    .byte <!!SCREEN_BASE+240!!, <!!SCREEN_BASE+280!!, <!!SCREEN_BASE+320!!
+    .byte <!!SCREEN_BASE+360!!, <!!SCREEN_BASE+400!!, <!!SCREEN_BASE+440!!
+    .byte <!!SCREEN_BASE+480!!, <!!SCREEN_BASE+520!!, <!!SCREEN_BASE+560!!
+    .byte <!!SCREEN_BASE+600!!, <!!SCREEN_BASE+640!!, <!!SCREEN_BASE+680!!
+    .byte <!!SCREEN_BASE+720!!, <!!SCREEN_BASE+760!!, <!!SCREEN_BASE+800!!
+    .byte <!!SCREEN_BASE+840!!, <!!SCREEN_BASE+880!!, <!!SCREEN_BASE+920!!
+    .byte <!!SCREEN_BASE+960!!
 
 screen_hi:
-    .byte >SCREEN_BASE, >{{SCREEN_BASE+40}}, >{{SCREEN_BASE+80}}
-    .byte >{{SCREEN_BASE+120}}, >{{SCREEN_BASE+160}}, >{{SCREEN_BASE+200}}
-    .byte >{{SCREEN_BASE+240}}, >{{SCREEN_BASE+280}}, >{{SCREEN_BASE+320}}
-    .byte >{{SCREEN_BASE+360}}, >{{SCREEN_BASE+400}}, >{{SCREEN_BASE+440}}
-    .byte >{{SCREEN_BASE+480}}, >{{SCREEN_BASE+520}}, >{{SCREEN_BASE+560}}
-    .byte >{{SCREEN_BASE+600}}, >{{SCREEN_BASE+640}}, >{{SCREEN_BASE+680}}
-    .byte >{{SCREEN_BASE+720}}, >{{SCREEN_BASE+760}}, >{{SCREEN_BASE+800}}
-    .byte >{{SCREEN_BASE+840}}, >{{SCREEN_BASE+880}}, >{{SCREEN_BASE+920}}
-    .byte >{{SCREEN_BASE+960}}
+    .byte >SCREEN_BASE, >!!SCREEN_BASE+40!!, >!!SCREEN_BASE+80!!
+    .byte >!!SCREEN_BASE+120!!, >!!SCREEN_BASE+160!!, >!!SCREEN_BASE+200!!
+    .byte >!!SCREEN_BASE+240!!, >!!SCREEN_BASE+280!!, >!!SCREEN_BASE+320!!
+    .byte >!!SCREEN_BASE+360!!, >!!SCREEN_BASE+400!!, >!!SCREEN_BASE+440!!
+    .byte >!!SCREEN_BASE+480!!, >!!SCREEN_BASE+520!!, >!!SCREEN_BASE+560!!
+    .byte >!!SCREEN_BASE+600!!, >!!SCREEN_BASE+640!!, >!!SCREEN_BASE+680!!
+    .byte >!!SCREEN_BASE+720!!, >!!SCREEN_BASE+760!!, >!!SCREEN_BASE+800!!
+    .byte >!!SCREEN_BASE+840!!, >!!SCREEN_BASE+880!!, >!!SCREEN_BASE+920!!
+    .byte >!!SCREEN_BASE+960!!
 
 color_lo:
-    .byte <COLOR_BASE, <{{COLOR_BASE+40}}, <{{COLOR_BASE+80}}
-    .byte <{{COLOR_BASE+120}}, <{{COLOR_BASE+160}}, <{{COLOR_BASE+200}}
-    .byte <{{COLOR_BASE+240}}, <{{COLOR_BASE+280}}, <{{COLOR_BASE+320}}
-    .byte <{{COLOR_BASE+360}}, <{{COLOR_BASE+400}}, <{{COLOR_BASE+440}}
-    .byte <{{COLOR_BASE+480}}, <{{COLOR_BASE+520}}, <{{COLOR_BASE+560}}
-    .byte <{{COLOR_BASE+600}}, <{{COLOR_BASE+640}}, <{{COLOR_BASE+680}}
-    .byte <{{COLOR_BASE+720}}, <{{COLOR_BASE+760}}, <{{COLOR_BASE+800}}
-    .byte <{{COLOR_BASE+840}}, <{{COLOR_BASE+880}}, <{{COLOR_BASE+920}}
-    .byte <{{COLOR_BASE+960}}
+    .byte <COLOR_BASE, <!!COLOR_BASE+40!!, <!!COLOR_BASE+80!!
+    .byte <!!COLOR_BASE+120!!, <!!COLOR_BASE+160!!, <!!COLOR_BASE+200!!
+    .byte <!!COLOR_BASE+240!!, <!!COLOR_BASE+280!!, <!!COLOR_BASE+320!!
+    .byte <!!COLOR_BASE+360!!, <!!COLOR_BASE+400!!, <!!COLOR_BASE+440!!
+    .byte <!!COLOR_BASE+480!!, <!!COLOR_BASE+520!!, <!!COLOR_BASE+560!!
+    .byte <!!COLOR_BASE+600!!, <!!COLOR_BASE+640!!, <!!COLOR_BASE+680!!
+    .byte <!!COLOR_BASE+720!!, <!!COLOR_BASE+760!!, <!!COLOR_BASE+800!!
+    .byte <!!COLOR_BASE+840!!, <!!COLOR_BASE+880!!, <!!COLOR_BASE+920!!
+    .byte <!!COLOR_BASE+960!!
 
 color_hi:
-    .byte >COLOR_BASE, >{{COLOR_BASE+40}}, >{{COLOR_BASE+80}}
-    .byte >{{COLOR_BASE+120}}, >{{COLOR_BASE+160}}, >{{COLOR_BASE+200}}
-    .byte >{{COLOR_BASE+240}}, >{{COLOR_BASE+280}}, >{{COLOR_BASE+320}}
-    .byte >{{COLOR_BASE+360}}, >{{COLOR_BASE+400}}, >{{COLOR_BASE+440}}
-    .byte >{{COLOR_BASE+480}}, >{{COLOR_BASE+520}}, >{{COLOR_BASE+560}}
-    .byte >{{COLOR_BASE+600}}, >{{COLOR_BASE+640}}, >{{COLOR_BASE+680}}
-    .byte >{{COLOR_BASE+720}}, >{{COLOR_BASE+760}}, >{{COLOR_BASE+800}}
-    .byte >{{COLOR_BASE+840}}, >{{COLOR_BASE+880}}, >{{COLOR_BASE+920}}
-    .byte >{{COLOR_BASE+960}}
+    .byte >COLOR_BASE, >!!COLOR_BASE+40!!, >!!COLOR_BASE+80!!
+    .byte >!!COLOR_BASE+120!!, >!!COLOR_BASE+160!!, >!!COLOR_BASE+200!!
+    .byte >!!COLOR_BASE+240!!, >!!COLOR_BASE+280!!, >!!COLOR_BASE+320!!
+    .byte >!!COLOR_BASE+360!!, >!!COLOR_BASE+400!!, >!!COLOR_BASE+440!!
+    .byte >!!COLOR_BASE+480!!, >!!COLOR_BASE+520!!, >!!COLOR_BASE+560!!
+    .byte >!!COLOR_BASE+600!!, >!!COLOR_BASE+640!!, >!!COLOR_BASE+680!!
+    .byte >!!COLOR_BASE+720!!, >!!COLOR_BASE+760!!, >!!COLOR_BASE+800!!
+    .byte >!!COLOR_BASE+840!!, >!!COLOR_BASE+880!!, >!!COLOR_BASE+920!!
+    .byte >!!COLOR_BASE+960!!
 
 ; Zero page pointers
 .const SCREEN_PTR $fb      ; 2 bytes

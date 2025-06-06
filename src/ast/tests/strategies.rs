@@ -13,9 +13,14 @@ pub fn label_name_strategy() -> impl Strategy<Value = String> {
 
 // Strategy for generating valid identifiers
 pub fn identifier_strategy() -> impl Strategy<Value = String> {
-    "[A-Z_][A-Z0-9_]*"
+    "[A-Z][A-Z0-9_]*"
         .prop_map(|s| s.to_string())
         .prop_filter("non-empty identifier", |s| !s.is_empty())
+}
+
+// Strategy for valid custom directive names
+pub fn dir_name_strategy() -> impl Strategy<Value = String> {
+    "[a-z][a-zA-Z_0-9]*".prop_map(|s| s.to_string())
 }
 
 // Strategy for generating number literals
@@ -54,7 +59,7 @@ pub fn ref_expr_strategy() -> impl Strategy<Value = RefExpr> {
 // Strategy for generating rhai script expressions
 // Note: testing actual Rhai script is out of scope.
 pub fn rhai_expr_strategy() -> impl Strategy<Value = RhaiExpr> {
-    r"[a-zA-Z0-9!@#\$%\^&\*\(\)_\+-= \t\n]".prop_map(|e| RhaiExpr::from(e.to_string()))
+    r"[a-zA-Z0-9@#\$%\^&\*\(\)_\+-= \t\n]".prop_map(|e| RhaiExpr::from(e.to_string()))
 }
 
 // Strategy for generating upper byte expressions
@@ -98,25 +103,6 @@ pub fn expr_strategy() -> impl Strategy<Value = Expr> {
             println!("generated: {:?}", e);
             e
         })
-}
-
-// Strategy for generating addressing modes
-pub fn addressing_mode_strategy() -> impl Strategy<Value = AddressingMode> {
-    prop_oneof![
-        Just(AddressingMode::Implied),
-        Just(AddressingMode::Accumulator),
-        Just(AddressingMode::Immediate),
-        Just(AddressingMode::ZeroPage),
-        Just(AddressingMode::ZeroPageX),
-        Just(AddressingMode::ZeroPageY),
-        Just(AddressingMode::Absolute),
-        Just(AddressingMode::AbsoluteX),
-        Just(AddressingMode::AbsoluteY),
-        Just(AddressingMode::Indirect),
-        Just(AddressingMode::IndexedIndirect),
-        Just(AddressingMode::IndirectIndexed),
-        Just(AddressingMode::Relative),
-    ]
 }
 
 // Strategy for generating operands
@@ -233,10 +219,7 @@ pub fn directive_strategy() -> impl Strategy<Value = Directive> {
         expr_strategy().prop_map(Directive::Byte),
         expr_strategy().prop_map(Directive::Word),
         expr_strategy().prop_map(Directive::Dword),
-        (
-            identifier_strategy(),
-            proptest::option::of(r"[a-zA-Z0-9_]+")
-        )
+        (dir_name_strategy(), proptest::option::of(r"[a-zA-Z0-9_]+"))
             .prop_map(|(name, value)| Directive::Unknown(name, value)),
     ]
 }

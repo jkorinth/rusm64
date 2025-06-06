@@ -265,6 +265,15 @@ impl RusmParser {
                 Rule::org_directive => {
                     return Self::parse_org_directive(t.into_inner());
                 }
+                Rule::byte_directive => {
+                    return Self::parse_emit_directive(Emit::Byte, t.into_inner());
+                }
+                Rule::word_directive => {
+                    return Self::parse_emit_directive(Emit::Word, t.into_inner());
+                }
+                Rule::dword_directive => {
+                    return Self::parse_emit_directive(Emit::Dword, t.into_inner());
+                }
                 Rule::script_directive => {
                     return Self::parse_script_directive(t.into_inner());
                 }
@@ -311,12 +320,34 @@ impl RusmParser {
         builder.build()
     }
 
+    pub fn parse_emit_directive(
+        emit: Emit,
+        mut pairs: Pairs<'_, Rule>,
+    ) -> Result<Directive, ParseError> {
+        let wrap = |expr| match emit {
+            Emit::Byte => Directive::Byte(expr),
+            Emit::Word => Directive::Word(expr),
+            Emit::Dword => Directive::Dword(expr),
+        };
+        if let Some(t) = pairs.next() {
+            match t.as_rule() {
+                Rule::expr => return Ok(wrap(Self::parse_expr(t.into_inner())?)),
+                _ => {
+                    return unexpected_rule!(t.as_rule() => "expr");
+                }
+            }
+        }
+        Err(ParseError::InvalidSyntax(
+            "unexpected end of emit directive".to_string(),
+        ))
+    }
     pub fn parse_script_directive(pairs: Pairs<'_, Rule>) -> Result<Directive, ParseError> {
         let mut builder = ScriptDirectiveBuilder::default();
 
         for t in pairs {
             builder = match t.as_rule() {
                 Rule::expr => builder.expr(Self::parse_expr(t.into_inner())?),
+                Rule::rhai_expr => builder.expr(Expr::Rhai(Self::parse_rhai_expr(t.into_inner())?)),
                 _ => {
                     return unexpected_rule!(t.as_rule() => "expr");
                 }
@@ -335,7 +366,10 @@ impl RusmParser {
                     name = Some(t.as_str().into());
                 }
                 Rule::dir_arg => {
-                    value = Some(t.as_str().into());
+                    let content = t.as_str().trim();
+                    if !content.is_empty() {
+                        value = Some(content.to_string());
+                    }
                 }
                 _ => {
                     return unexpected_rule!(t.as_rule() => "dir_name or dir_arg");
@@ -348,6 +382,12 @@ impl RusmParser {
 
 pub fn from_source(src: &str) -> Result<Ast, ParseError> {
     RusmParser::from_source(src)
+}
+
+pub enum Emit {
+    Byte,
+    Word,
+    Dword,
 }
 
 #[cfg(test)]
@@ -506,12 +546,12 @@ mod tests {
             "($1, x)",    // indexed indirect
             "(  $1 , x)", // indexed indirect
             "($1   ), y", // indirect indexed
-            "{{ rhai }}",
-            "#{{ rhai }}",
-            "{{ rhai }}, x",
-            "{{ rhai }}, y",
-            "({{ rhai }}), y",
-            "({{ rhai }}, x)",
+            "!! rhai !!",
+            "#!! rhai !!",
+            "!! rhai !!, x",
+            "!! rhai !!, y",
+            "(!! rhai !!), y",
+            "(!! rhai !!, x)",
         ];
         for t in tests {
             let mut ast = RusmParser::parse(Rule::operand, t).unwrap();
@@ -527,7 +567,7 @@ mod tests {
     #[test]
     fn rule_rhai() {
         pest::set_error_detail(true);
-        let tests = ["{{ 1 + 1 }}"];
+        let tests = ["!! 1 + 1 !!"];
         for t in tests {
             let ast = RusmParser::parse(Rule::rhai_expr, t).unwrap();
             println!("<rule_rhai> op expr: {}", t);
